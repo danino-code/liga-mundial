@@ -35,10 +35,10 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--txt);}
 #screen-app.slide-in{transform:translateX(0);opacity:1;}
 
 /* ══ LOGIN ══ */
-.login-hero{text-align:center;padding:2.2rem 1rem 1.2rem;flex-shrink:0;}
-.login-trophy{font-size:54px;line-height:1;margin-bottom:.3rem;}
-.login-title{font-family:'Bebas Neue',sans-serif;font-size:48px;color:#fff;letter-spacing:3px;line-height:1;}
-.login-sub{color:rgba(255,255,255,.5);font-size:12px;letter-spacing:.14em;text-transform:uppercase;margin-top:5px;}
+.login-hero{text-align:center;padding:3rem 1rem 2rem;flex-shrink:0;background:linear-gradient(180deg,rgba(0,0,0,.12) 0%,transparent 100%);}
+.login-trophy{font-size:64px;line-height:1;margin-bottom:.5rem;filter:drop-shadow(0 2px 8px rgba(0,0,0,.15));}
+.login-title{font-family:'Bebas Neue',sans-serif;font-size:56px;color:#fff;letter-spacing:6px;line-height:1;text-shadow:0 2px 12px rgba(0,0,0,.3);}
+.login-sub{color:rgba(255,255,255,.65);font-size:13px;letter-spacing:.2em;text-transform:uppercase;margin-top:8px;font-weight:600;}
 .login-panel{background:#fff;border-radius:20px 20px 0 0;flex:1;padding:1.6rem 1.4rem 2.5rem;min-height:0;}
 .login-panel h2{font-size:17px;font-weight:700;margin-bottom:1rem;}
 .player-grid{display:flex;flex-direction:column;gap:7px;overflow-y:auto;max-height:calc(100vh - 340px);margin-bottom:.9rem;}
@@ -57,8 +57,8 @@ body{font-family:'Nunito',sans-serif;background:var(--bg);color:var(--txt);}
 .new-row input:focus{border-color:var(--g);}
 
 /* ══ APP LAYOUT — fixed header+tabs, scrollable content ══ */
-.hdr{flex-shrink:0;height:var(--hdr);background:var(--gd);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 1rem;box-shadow:0 2px 8px rgba(0,0,0,.18);}
-.hdr-logo{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1px;display:flex;align-items:center;gap:8px;}
+.hdr{flex-shrink:0;height:var(--hdr);background:linear-gradient(135deg,#0a5d3a,var(--gd));color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 1.2rem;box-shadow:0 3px 12px rgba(0,0,0,.2);}
+.hdr-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;display:flex;align-items:center;gap:10px;text-shadow:0 1px 3px rgba(0,0,0,.2);}
 .hdr-user{display:flex;align-items:center;gap:7px;cursor:pointer;padding:5px 10px;border-radius:20px;transition:background .15s;-webkit-tap-highlight-color:transparent;}
 .hdr-user:hover,.hdr-user:active{background:rgba(255,255,255,.15);}
 .hdr-uname{font-size:13px;font-weight:700;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -105,17 +105,22 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
 .bdg-blue{background:#e5f0fb;color:#185fa5;}.bdg-red{background:var(--redl);color:var(--red);}
 
 /* ══ TABLA ══ */
-.tabla{width:100%;border-collapse:collapse;}
-.tabla th{font-size:11px;font-weight:700;color:var(--muted);text-align:left;padding:5px 6px;border-bottom:1px solid var(--border);}
-.tabla td{padding:10px 6px;border-bottom:1px solid var(--border);vertical-align:middle;}
-.tabla tr:last-child td{border-bottom:none;}.tabla tbody tr:hover{background:var(--bg);}
-.rank{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin:auto;}
-.r1{background:var(--goldl);color:var(--gold);border:1.5px solid #d4a020;}.r2{background:#f0f0ee;color:#888;border:1.5px solid #ccc;}
-.r3{background:var(--redl);color:var(--red);border:1.5px solid #f0a0a0;}.rn{background:var(--bg);color:var(--muted);}
-.pts-big{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--g);letter-spacing:1px;}
-.stats{display:flex;gap:8px;margin-bottom:12px;}
-.sc{flex:1;background:var(--card);border-radius:var(--r);padding:10px;text-align:center;border:1px solid var(--border);}
-.sc .v{font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--g);}.sc .l{font-size:11px;color:var(--muted);font-weight:600;}
+.tabla{width:100%;border-collapse:separate;border-spacing:0 6px;}
+.tabla th{font-size:11px;font-weight:700;color:var(--muted);text-align:left;padding:8px 12px;border:none;text-transform:uppercase;letter-spacing:.06em;}
+.tabla td{padding:14px 12px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);vertical-align:middle;background:#fff;}
+.tabla td:first-child{border-left:1px solid var(--border);border-radius:var(--r) 0 0 var(--r);}
+.tabla td:last-child{border-right:1px solid var(--border);border-radius:0 var(--r) var(--r) 0;}
+.tabla tbody tr:hover td{background:var(--gl);border-color:var(--g);}
+.rank{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;margin:auto;}
+.r1{background:linear-gradient(135deg,#ffd700,#ffed4e);color:#7a5000;border:none;box-shadow:0 2px 8px rgba(255,215,0,.3);}
+.r2{background:linear-gradient(135deg,#c0c0c0,#e8e8e8);color:#666;border:none;box-shadow:0 2px 8px rgba(192,192,192,.3);}
+.r3{background:linear-gradient(135deg,#cd7f32,#e9a66f);color:#4a2b0f;border:none;box-shadow:0 2px 8px rgba(205,127,50,.3);}
+.rn{background:var(--bg);color:var(--muted);}
+.pts-big{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--g);letter-spacing:1px;font-weight:400;}
+.stats{display:flex;gap:10px;margin-bottom:14px;}
+.sc{flex:1;background:linear-gradient(135deg,#fff,#fafaf8);border-radius:var(--r);padding:14px;text-align:center;border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.sc .v{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--g);text-shadow:0 1px 2px rgba(26,158,106,.1);}
+.sc .l{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px;}
 
 /* ══ FLAG IMAGE ══ */
 .flag-img{width:24px;height:16px;border-radius:2px;object-fit:cover;flex-shrink:0;border:1px solid rgba(0,0,0,.08);}
@@ -323,15 +328,6 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
             <div style="display:flex;align-items:center;gap:12px;background:var(--bg);padding:11px;border-radius:var(--r2)"><div style="width:36px;height:36px;background:var(--bg);border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">❌</div><div><div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--muted)">0 PUNTOS</div><div style="font-size:13px;color:var(--muted)">No aciertas nada</div></div></div>
             <div style="background:var(--bg);padding:11px;border-radius:var(--r2);font-size:13px;color:var(--muted);line-height:1.7"><strong style="color:var(--txt)">Grupos:</strong> +2 pts por cada equipo que clasificas correctamente.<br><strong style="color:var(--txt)">Especiales:</strong> Finalistas +5 c/u · 3er y 4to +5 c/u · Campeón +10.<br><strong style="color:var(--txt)">Eliminación con empate:</strong> elige también quien gana en penaltis.</div>
           </div>
-        </div>
-        <div class="api-box">
-          <h3>🔗 Conectar API de resultados</h3>
-          <div class="api-step"><div class="api-num">1</div><div class="api-txt">Crea cuenta gratis en <strong>football-data.org</strong> y copia tu API key.</div></div>
-          <div class="api-step"><div class="api-num">2</div><div class="api-txt">Entra como admin → pestaña <strong>Partidos</strong> → pega y guarda la key.</div></div>
-          <div class="api-step"><div class="api-num">3</div><div class="api-txt"><strong>Limitación CORS:</strong> Los navegadores bloquean llamadas directas. Necesitas un proxy gratis en Netlify. Crea <code style="background:rgba(0,0,0,.2);padding:1px 4px;border-radius:3px">netlify/functions/proxy.js</code>:</div></div>
-          <div class="api-code">exports.handler = async (event) => {<br>&nbsp;&nbsp;const key = process.env.FOOTBALL_API_KEY;<br>&nbsp;&nbsp;const url = event.queryStringParameters.url;<br>&nbsp;&nbsp;const res = await fetch(url,{headers:{'X-Auth-Token':key}});<br>&nbsp;&nbsp;const data = await res.json();<br>&nbsp;&nbsp;return {statusCode:200,body:JSON.stringify(data),<br>&nbsp;&nbsp;&nbsp;&nbsp;headers:{'Access-Control-Allow-Origin':'*'}};<br>};</div>
-          <div class="api-step" style="margin-top:10px"><div class="api-num">4</div><div class="api-txt">En Netlify agrega la variable de entorno <code style="background:rgba(0,0,0,.2);padding:1px 4px;border-radius:3px">FOOTBALL_API_KEY</code>. Listo.</div></div>
-          <div style="margin-top:10px;padding:8px 10px;background:rgba(255,255,255,.15);border-radius:6px;font-size:12px">💡 Migrar de GitHub Pages a Netlify es gratis y más poderoso. Dime y te explico.</div>
         </div>
         <div class="card" style="text-align:center;padding:1.5rem">
           <div style="font-size:28px;margin-bottom:8px">⚽</div>
