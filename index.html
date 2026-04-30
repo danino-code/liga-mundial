@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Mundial la Comarca 2026</title>
+<title>Liga Mundial 2026</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -191,7 +191,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
 <div id="screen-login">
   <div class="login-hero">
     <div class="login-trophy">🏆</div>
-    <div class="login-title">MUNDIAL LA COMARCA</div>
+    <div class="login-title">LIGA MUNDIAL</div>
     <div class="login-sub">2026 · Predicciones</div>
   </div>
   <div class="login-panel">
@@ -209,7 +209,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
 <!-- ══════ APP ══════ -->
 <div id="screen-app">
   <div class="hdr">
-    <div class="hdr-logo">🏆 Mundial la Comarca 2026</div>
+    <div class="hdr-logo">🏆 Liga Mundial 2026</div>
     <div class="hdr-user" onclick="showUserMenu()">
       <span class="hdr-uname" id="hdr-name"></span>
       <span style="font-size:11px;opacity:.5">▾</span>
@@ -262,6 +262,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
               <button class="btn btn-p btn-sm" onclick="document.getElementById('add-match-card').classList.toggle('hidden')">+ Partido manual</button>
               <button class="btn btn-gold btn-sm" onclick="fetchTodayMatches()">⬇ Importar de API</button>
               <button class="btn btn-sm" id="lock-btn" onclick="toggleLock()">🔒 Bloquear predicciones</button>
+              <button class="btn btn-d btn-sm" onclick="openResetModal()">🗑 Resetear datos</button>
             </div>
             <div class="fld"><label>API Key — football-data.org</label>
               <div class="flex"><input id="api-key-inp" type="password" placeholder="Pega tu API key aquí" style="flex:1"><button class="btn btn-p btn-sm" onclick="saveApiKey()">Guardar</button></div>
@@ -302,7 +303,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
         <div id="lock-banner-sp" class="lock-banner hidden">🔒 Las predicciones están bloqueadas.</div>
         <div style="background:linear-gradient(135deg,#7a5000,var(--gold));color:#fff;border-radius:var(--r);padding:1rem 1.1rem;margin-bottom:12px;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:3px;">Predicciones especiales</div>
-          <div style="font-size:13px;opacity:.85">Finalistas · Podio · Campeón </div>
+          <div style="font-size:13px;opacity:.85">Finalistas · Podio · Campeón — las 48 selecciones</div>
         </div>
         <div id="specials-body"></div>
       </div>
@@ -403,6 +404,44 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 3px rgba(26,158,
     <div id="ptb-lbl" style="font-size:13px;color:var(--muted);margin-bottom:14px"></div>
     <div id="ptb-btns" class="flex" style="flex-wrap:wrap;gap:8px"></div>
     <div class="modal-actions"><button class="btn btn-g" onclick="closeM('modal-ptb')">Cancelar</button></div>
+  </div>
+</div>
+
+<!-- MODAL RESET -->
+<div id="modal-reset" class="ov hidden">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Resetear datos</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.6">Elige qué quieres borrar. Esta acción <strong style="color:var(--red)">no se puede deshacer</strong>.</div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--r2);border:1.5px solid var(--border);cursor:pointer;transition:all .15s" id="lbl-r-preds" onclick="toggleReset('preds')">
+        <div id="chk-preds" style="width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all .15s"></div>
+        <div><div style="font-size:14px;font-weight:700">Predicciones y puntos</div><div style="font-size:12px;color:var(--muted);margin-top:1px">Borra todas las predicciones de partidos, grupos y especiales. Los jugadores y partidos quedan.</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--r2);border:1.5px solid var(--border);cursor:pointer;transition:all .15s" id="lbl-r-matches" onclick="toggleReset('matches')">
+        <div id="chk-matches" style="width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all .15s"></div>
+        <div><div style="font-size:14px;font-weight:700">Partidos</div><div style="font-size:12px;color:var(--muted);margin-top:1px">Borra todos los partidos y sus resultados. Las predicciones también se borran.</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--r2);border:1.5px solid var(--border);cursor:pointer;transition:all .15s" id="lbl-r-players" onclick="toggleReset('players')">
+        <div id="chk-players" style="width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all .15s"></div>
+        <div><div style="font-size:14px;font-weight:700">Jugadores</div><div style="font-size:12px;color:var(--muted);margin-top:1px">Borra todos los jugadores registrados y sus predicciones.</div></div>
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:var(--r2);border:1.5px solid var(--border);cursor:pointer;transition:all .15s" id="lbl-r-specresults" onclick="toggleReset('specresults')">
+        <div id="chk-specresults" style="width:20px;height:20px;border-radius:5px;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:12px;transition:all .15s"></div>
+        <div><div style="font-size:14px;font-weight:700">Resultados especiales y de grupos</div><div style="font-size:12px;color:var(--muted);margin-top:1px">Borra los resultados de campeón, finalistas, podio y clasificados de grupos. Las predicciones quedan.</div></div>
+      </label>
+    </div>
+
+    <div id="reset-confirm-zone" style="display:none;background:var(--redl);border:1px solid #f0a0a0;border-radius:var(--r2);padding:11px 12px;margin-bottom:12px;font-size:13px;color:var(--red)">
+      ¿Seguro? Escribe <strong>BORRAR</strong> para confirmar:
+      <input type="text" id="reset-confirm-input" placeholder="Escribe BORRAR" style="margin-top:8px;border-color:#f0a0a0">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-d" id="reset-exec-btn" onclick="executeReset()" style="opacity:.4;pointer-events:none">Borrar seleccionado</button>
+      <button class="btn btn-g" onclick="closeResetModal()">Cancelar</button>
+    </div>
   </div>
 </div>
 
@@ -739,6 +778,89 @@ function go(id,btn){
 function closeM(id){document.getElementById(id)?.classList.add('hidden');}
 document.querySelectorAll('.ov').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)closeM(o.id);}));
 function copyLink(){navigator.clipboard.writeText(window.location.href).then(()=>alert('¡Link copiado!'));}
+
+// ── RESET ──────────────────────────────────────────────────────
+const resetSel={preds:false,matches:false,players:false,specresults:false};
+
+function openResetModal(){
+  // Clear state
+  Object.keys(resetSel).forEach(k=>resetSel[k]=false);
+  Object.keys(resetSel).forEach(k=>updateResetChk(k,false));
+  document.getElementById('reset-confirm-zone').style.display='none';
+  document.getElementById('reset-confirm-input').value='';
+  updateResetBtn();
+  document.getElementById('modal-reset').classList.remove('hidden');
+}
+
+function closeResetModal(){
+  document.getElementById('modal-reset').classList.add('hidden');
+}
+
+function toggleReset(key){
+  resetSel[key]=!resetSel[key];
+  updateResetChk(key,resetSel[key]);
+  const anySelected=Object.values(resetSel).some(Boolean);
+  document.getElementById('reset-confirm-zone').style.display=anySelected?'block':'none';
+  if(!anySelected) document.getElementById('reset-confirm-input').value='';
+  updateResetBtn();
+  // Live check as user types
+  document.getElementById('reset-confirm-input').oninput=updateResetBtn;
+}
+
+function updateResetChk(key,on){
+  const chk=document.getElementById('chk-'+key);
+  const lbl=document.getElementById('lbl-r-'+key);
+  chk.textContent=on?'✓':'';
+  chk.style.background=on?'var(--red)':'';
+  chk.style.borderColor=on?'var(--red)':'var(--border)';
+  chk.style.color=on?'#fff':'';
+  lbl.style.borderColor=on?'var(--red)':'var(--border)';
+  lbl.style.background=on?'var(--redl)':'';
+}
+
+function updateResetBtn(){
+  const anySelected=Object.values(resetSel).some(Boolean);
+  const confirmed=document.getElementById('reset-confirm-input').value.trim().toUpperCase()==='BORRAR';
+  const btn=document.getElementById('reset-exec-btn');
+  const ready=anySelected&&confirmed;
+  btn.style.opacity=ready?'1':'0.4';
+  btn.style.pointerEvents=ready?'auto':'none';
+}
+
+async function executeReset(){
+  const confirmed=document.getElementById('reset-confirm-input').value.trim().toUpperCase()==='BORRAR';
+  if(!confirmed){alert('Escribe BORRAR para confirmar');return;}
+  const tasks=[];
+  if(resetSel.preds){
+    tasks.push(db.ref('predictions').remove());
+    tasks.push(db.ref('specPreds').remove());
+    tasks.push(db.ref('grpPreds').remove());
+  }
+  if(resetSel.matches){
+    tasks.push(db.ref('matches').remove());
+    tasks.push(db.ref('predictions').remove()); // also wipe preds
+  }
+  if(resetSel.players){
+    tasks.push(db.ref('players').remove());
+    tasks.push(db.ref('predictions').remove());
+    tasks.push(db.ref('specPreds').remove());
+    tasks.push(db.ref('grpPreds').remove());
+  }
+  if(resetSel.specresults){
+    tasks.push(db.ref('settings/specialResults').remove());
+    tasks.push(db.ref('settings/groupResults').remove());
+  }
+  await Promise.all(tasks);
+  closeResetModal();
+  // If players were deleted, log out current user
+  if(resetSel.players){logout();}
+  const what=[];
+  if(resetSel.preds)what.push('predicciones y puntos');
+  if(resetSel.matches)what.push('partidos');
+  if(resetSel.players)what.push('jugadores');
+  if(resetSel.specresults)what.push('resultados especiales');
+  alert('✓ Borrado: '+what.join(', '));
+}
 </script>
 </body>
 </html>
