@@ -43,7 +43,7 @@ body{
 
 /* ── SCREENS ── */
 #screen-login,#screen-app{position:fixed;inset:0;transition:transform .4s cubic-bezier(.4,0,.2,1),opacity .4s;will-change:transform;}
-#screen-login{display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,var(--gd2) 0%,var(--gd) 35%,var(--g) 75%,var(--g2) 100%);position:relative;}
+#screen-login{display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,var(--gd2) 0%,var(--gd) 35%,var(--g) 75%,var(--g2) 100%);position:fixed;inset:0;}
 #screen-login::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0 2px,transparent 2px 24px),radial-gradient(circle at 20% 10%,rgba(255,255,255,.08) 0%,transparent 35%),radial-gradient(circle at 90% 80%,rgba(0,0,0,.18) 0%,transparent 40%);}
 #screen-app{display:flex;flex-direction:column;background:transparent;}
 #screen-login.slide-out{transform:translateX(-100%);opacity:0;pointer-events:none;}
