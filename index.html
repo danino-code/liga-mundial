@@ -213,8 +213,8 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
 /* ── GROUP BLOCKS ── */
 .grp-block{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:12px;box-shadow:var(--shadow);background:var(--card);}
 .grp-hdr{background:linear-gradient(135deg,var(--gd2) 0%,var(--gd) 50%,var(--g) 100%);color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:relative;overflow:hidden;}
-.grp-hdr::before{content:"";position:absolute;inset:0;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 2px,transparent 2px 14px);}
-.grp-hdr::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;background:radial-gradient(circle,rgba(240,181,40,.15),transparent 70%);}
+.grp-hdr::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.04) 0 2px,transparent 2px 14px);}
+.grp-hdr::after{content:"";position:absolute;right:-30px;top:-30px;width:90px;height:90px;border-radius:50%;pointer-events:none;background:radial-gradient(circle,rgba(240,181,40,.15),transparent 70%);}
 .grp-hdr .gname{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:2px;position:relative;z-index:1;display:flex;align-items:center;gap:10px;}
 .grp-hdr .gname::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--gold2);box-shadow:0 0 0 3px rgba(240,181,40,.3),0 0 10px var(--gold2);}
 .grp-pts{font-size:12px;font-weight:900;background:rgba(255,255,255,.18);padding:4px 11px;border-radius:20px;backdrop-filter:blur(6px);position:relative;z-index:1;}
@@ -1075,7 +1075,7 @@ function renderSeed(){
   let h=`<div class="fb mb8"><div style="font-size:13px;color:var(--muted);font-weight:700">${uploaded}/72 partidos subidos</div><button class="btn btn-gold btn-sm" onclick="uploadSeedAll()">⬆ Subir todos</button></div>`;
   days.forEach(dk=>{
     const list=all.filter(s=>s.dayKey===dk),up=list.filter(s=>matches[s.id]).length,pend=list.length-up;
-    h+=`<div class="grp-block"><div class="grp-hdr"><span class="gname" style="font-size:17px;text-transform:capitalize">${dayLabel(dk)}</span>${pend?`<button class="btn btn-p btn-xs" onclick="uploadSeedDay('${dk}')">⬆ Subir ${pend}</button>`:`<span style="font-size:12px;font-weight:700;opacity:.85">✓ Subidos</span>`}</div><div class="grp-body" style="padding:8px 12px">`;
+    h+=`<div class="grp-block"><div class="grp-hdr"><span class="gname" style="font-size:17px;text-transform:capitalize">${dayLabel(dk)}</span>${pend?`<button class="btn btn-p btn-xs" style="position:relative;z-index:2" onclick="uploadSeedDay('${dk}')">⬆ Subir ${pend}</button>`:`<span style="font-size:12px;font-weight:700;opacity:.85;position:relative;z-index:2">✓ Subidos</span>`}</div><div class="grp-body" style="padding:8px 12px">`;
     list.forEach(s=>{const on=!!matches[s.id];
       h+=`<div class="pred-mini" style="padding:6px 0"><span style="width:46px;font-weight:800;color:var(--muted)">${fTime(s.kickoff)}</span><span class="bdg bdg-gray" style="margin-right:6px">${s.grp}</span><span style="flex:1">${s.home} vs ${s.away}</span>${on?'<span class="pts-tag pts-saved">✓</span>':''}</div>`;
     });
