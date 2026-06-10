@@ -43,7 +43,7 @@ body{
 
 /* ── SCREENS ── */
 #screen-login,#screen-app{position:fixed;inset:0;transition:transform .4s cubic-bezier(.4,0,.2,1),opacity .4s;will-change:transform;}
-#screen-login{display:flex;flex-direction:column;overflow-y:auto;background:linear-gradient(160deg,var(--gd2) 0%,var(--gd) 35%,var(--g) 75%,var(--g2) 100%);position:relative;}
+#screen-login{display:flex;flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,var(--gd2) 0%,var(--gd) 35%,var(--g) 75%,var(--g2) 100%);position:relative;}
 #screen-login::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.025) 0 2px,transparent 2px 24px),radial-gradient(circle at 20% 10%,rgba(255,255,255,.08) 0%,transparent 35%),radial-gradient(circle at 90% 80%,rgba(0,0,0,.18) 0%,transparent 40%);}
 #screen-app{display:flex;flex-direction:column;background:transparent;}
 #screen-login.slide-out{transform:translateX(-100%);opacity:0;pointer-events:none;}
@@ -64,11 +64,11 @@ body{
 .login-title-year{display:block;font-family:'Archivo Black',sans-serif;font-size:14px;letter-spacing:.4em;color:var(--gold2);margin-top:8px;}
 .login-sub{color:rgba(255,255,255,.65);font-size:11px;letter-spacing:.35em;text-transform:uppercase;margin-top:14px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;}
 .login-sub::before,.login-sub::after{content:"";width:24px;height:1px;background:rgba(255,255,255,.3);}
-.login-panel{background:var(--bg);border-radius:32px 32px 0 0;flex:1;padding:2.2rem 1.3rem calc(1.8rem + var(--safe-b));min-height:0;position:relative;z-index:1;box-shadow:0 -8px 30px rgba(0,0,0,.2);display:flex;flex-direction:column;}
+.login-panel{background:var(--bg);border-radius:32px 32px 0 0;flex:1 0 auto;padding:2.2rem 1.3rem calc(1.8rem + var(--safe-b));position:relative;z-index:1;box-shadow:0 -8px 30px rgba(0,0,0,.2);display:flex;flex-direction:column;}
 .login-panel::before{content:"";position:absolute;top:12px;left:50%;transform:translateX(-50%);width:48px;height:5px;background:var(--border2);border-radius:3px;}
 .login-panel h2{font-size:13px;font-weight:900;margin:0 0 1rem;color:var(--gd);text-transform:uppercase;letter-spacing:.18em;display:flex;align-items:center;gap:8px;}
 .login-panel h2::before{content:"";width:4px;height:16px;background:linear-gradient(180deg,var(--g2),var(--gd));border-radius:2px;}
-.player-grid{display:flex;flex-direction:column;gap:8px;overflow-y:auto;flex:1;min-height:0;margin-bottom:1rem;padding:2px;}
+.player-grid{display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;padding:2px;}
 .player-grid::-webkit-scrollbar{width:3px;}.player-grid::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .pl-card{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r);border:1.5px solid var(--border);cursor:pointer;transition:all .18s cubic-bezier(.4,0,.2,1);background:var(--card);box-shadow:var(--shadow-sm);position:relative;overflow:hidden;}
 .pl-card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--g2),var(--gd));opacity:0;transition:opacity .18s;}
@@ -371,20 +371,12 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
     <div class="login-badge">EN VIVO · CONECTADO</div>
     <div class="login-trophy">🏆</div>
     <div class="login-title">LIGA MUNDIAL<span class="login-title-year">EDICIÓN 2026</span></div>
-    <div class="login-sub">Crea tu liga · Invita con un link</div>
+    <div class="login-sub">Elige tu liga · 48 Selecciones · 1 Campeón</div>
   </div>
   <div class="login-panel">
-    <h2>Crear una liga nueva</h2>
-    <div class="new-row">
-      <input type="text" id="new-group-name" placeholder="Ej: La liga del barrio" maxlength="32" onkeydown="if(event.key==='Enter')createGroup()">
-      <button class="btn btn-p" onclick="createGroup()">Crear →</button>
-    </div>
-    <div style="font-size:12px;color:var(--muted);margin-top:10px;line-height:1.5">Al crearla obtendrás un <strong>link único</strong>. Compártelo y todos los que entren por ese link estarán en tu liga.</div>
-    <div class="login-divider">o únete a una existente</div>
-    <div class="new-row">
-      <input type="text" id="join-group-code" placeholder="Pega aquí el link o código" onkeydown="if(event.key==='Enter')joinGroup()">
-      <button class="btn btn-g" onclick="joinGroup()">Entrar</button>
-    </div>
+    <h2>Elige tu liga</h2>
+    <div id="league-list" class="player-grid"></div>
+    <div style="font-size:12px;color:var(--muted);margin-top:12px;line-height:1.5">Comparte con tus amigos el link de la liga a la que quieres que entren. Cada liga tiene su propia tabla y predicciones.</div>
   </div>
 </div>
 
@@ -799,35 +791,39 @@ function initGroupListeners(){
   setInterval(()=>{if(me){renderPreds();updatePredBadge();renderMatches();}},60000);
 }
 function paintGroupName(){
-  const nm=groupMeta.name||'';
+  const nm=groupMeta.name||(typeof LEAGUES!=='undefined'?LEAGUES[GID]:'')||'';
   const el=document.getElementById('group-name-login');if(el)el.textContent=nm?('Liga: '+nm):'';
 }
 
 // ── BOOT ───────────────────────────────────────────────────────
-if(GID){
+// SOLO existen estas dos ligas. Para cambiar los nombres, edita aquí.
+// Los links son:  ...tu-sitio...?g=liga1   y   ...tu-sitio...?g=liga2
+const LEAGUES={
+  liga1:'Liga 1',
+  liga2:'Liga 2'
+};
+if(GID && LEAGUES[GID]){
+  ensureLeagueMeta();
   initGroupListeners();
 }else{
-  // Sin ?g= → pantalla para crear/unirse a una liga.
+  // Sin liga válida → solo se puede elegir una de las dos.
   document.getElementById('screen-login').style.display='none';
+  renderLeaguePicker();
   document.getElementById('screen-group').classList.add('show');
   hideLoading();
 }
-
-// ── CREAR / UNIRSE A LIGA ──────────────────────────────────────
-function createGroup(){
-  const name=document.getElementById('new-group-name').value.trim();
-  if(!name){toast('Escribe el nombre de tu liga','error');return;}
-  const gid=genGID();
-  db.ref('groups/'+gid+'/meta').set({name,createdAt:Date.now()}).then(()=>{
-    location.href=groupLink(gid);
-  }).catch(e=>toast('Error: '+e.message,'error'));
+function ensureLeagueMeta(){
+  db.ref('groups/'+GID+'/meta').once('value').then(s=>{
+    if(!s.val())db.ref('groups/'+GID+'/meta').set({name:LEAGUES[GID],createdAt:Date.now()});
+  }).catch(()=>{});
 }
-function joinGroup(){
-  let v=document.getElementById('join-group-code').value.trim();
-  if(!v){toast('Pega el código o link de tu liga','error');return;}
-  // Acepta un link completo (…?g=CODIGO) o solo el código.
-  const m=v.match(/[?&]g=([^&\s]+)/);if(m)v=m[1];
-  location.href=groupLink(v);
+function renderLeaguePicker(){
+  const box=document.getElementById('league-list');if(!box)return;
+  box.innerHTML=Object.entries(LEAGUES).map(([id,name])=>
+    `<div class="pl-card" onclick="location.href=groupLink('${id}')">
+       <div class="pl-rank gold">🏆</div>
+       <div class="pl-info"><div class="pl-name">${name}</div><div class="pl-meta">Entrar a esta liga →</div></div>
+     </div>`).join('');
 }
 
 // ── SCORING ──────────────────────────────────────────────────────
