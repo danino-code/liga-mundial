@@ -419,8 +419,8 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
     <button class="tb on"  onclick="go('tabla',this)"><span class="tb-icon">🏅</span><span class="tb-lbl">Tabla</span></button>
     <button class="tb"     onclick="go('partidos',this)"><span class="tb-icon">📋</span><span class="tb-lbl">Partidos</span></button>
     <button class="tb"     onclick="go('predecir',this)" id="tb-predecir"><span class="tb-icon">🎯</span><span class="tb-lbl">Predecir</span></button>
-    <button class="tb"     onclick="go('grupos',this)"><span class="tb-icon">📊</span><span class="tb-lbl">Grupos</span></button>
-    <button class="tb"     onclick="go('especiales',this)"><span class="tb-icon">⭐</span><span class="tb-lbl">Especiales</span></button>
+    <button class="tb"     onclick="go('grupos',this)" id="tb-grupos"><span class="tb-icon">📊</span><span class="tb-lbl">Grupos</span></button>
+    <button class="tb"     onclick="go('especiales',this)" id="tb-especiales"><span class="tb-icon">⭐</span><span class="tb-lbl">Especiales</span></button>
     <button class="tb"     onclick="go('jugadores',this)"><span class="tb-icon">👥</span><span class="tb-lbl">Jugadores</span></button>
     <button class="tb"     onclick="go('reglas',this)"><span class="tb-icon">📖</span><span class="tb-lbl">Reglas</span></button>
   </div>
@@ -429,6 +429,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
 
       <!-- TABLA -->
       <div id="sec-tabla" class="sec on">
+        <div id="ge-reminder"></div>
         <div class="stats" id="stats-row"></div>
         <div class="card"><div class="ctitle">Clasificación general</div><div class="tabla-wrap" id="tabla-body"></div></div>
       </div>
@@ -460,8 +461,9 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
             <div class="ctitle">Panel admin</div>
             <div class="flex" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
               <button class="btn btn-p btn-sm" onclick="document.getElementById('add-match-card').classList.toggle('hidden')">+ Partido manual</button>
-              <button class="btn btn-gold btn-sm" onclick="fetchTodayMatches()">⬇ Importar API</button>
-              <button class="btn btn-sm" id="lock-btn" onclick="toggleLock()">🔒 Bloquear</button>
+              <button class="btn btn-gold btn-sm" onclick="openSeed()">🌱 Sembrar calendario</button>
+              <button class="btn btn-sm" id="lock-btn" onclick="toggleLock()">🔒 Partidos</button>
+              <button class="btn btn-sm" id="lockge-btn" onclick="toggleLockGE()">🔒 Grupos/Especiales</button>
               <button class="btn btn-d btn-sm" onclick="openResetModal()">🗑 Resetear</button>
             </div>
             <div class="fld"><label>API Key – football-data.org</label>
@@ -535,6 +537,17 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
       </div>
 
     </div>
+  </div>
+</div>
+
+<!-- MODAL SEMBRAR CALENDARIO -->
+<div id="modal-seed" class="ov hidden">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Sembrar calendario</h3>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:14px;line-height:1.5">Sube los partidos oficiales de fase de grupos cuando quieras: todos de una, o día por día. Los que ya subiste no se duplican.</div>
+    <div id="seed-body"></div>
+    <button class="btn btn-g btn-full" style="margin-top:12px" onclick="closeM('modal-seed')">Cerrar</button>
   </div>
 </div>
 
@@ -628,7 +641,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
       <button class="btn btn-g btn-full" onclick="closeM('modal-user');document.getElementById('modal-admin').classList.remove('hidden')">🔑 Acceso admin</button>
       <button class="btn btn-g btn-full" onclick="copyLink()">📋 Copiar link de esta liga</button>
       <button class="btn btn-d btn-full" onclick="logout()">↩ Cambiar jugador</button>
-      <button class="btn btn-g btn-full" onclick="location.href=location.origin+location.pathname">🔀 Cambiar de liga</button>
+      <button class="btn btn-g btn-full" id="btn-changeleague" style="display:none" onclick="location.href=location.origin+location.pathname">🔀 Cambiar de liga</button>
     </div>
   </div>
 </div>
@@ -800,7 +813,7 @@ function paintGroupName(){
 // Los links son:  ...tu-sitio...?g=liga1   y   ...tu-sitio...?g=liga2
 const LEAGUES={
   liga1:'La Comarca',
-  liga2:'Liga 2'
+  liga2:'Mundial'
 };
 if(GID && LEAGUES[GID]){
   ensureLeagueMeta();
@@ -813,9 +826,7 @@ if(GID && LEAGUES[GID]){
   hideLoading();
 }
 function ensureLeagueMeta(){
-  db.ref('groups/'+GID+'/meta').once('value').then(s=>{
-    if(!s.val())db.ref('groups/'+GID+'/meta').set({name:LEAGUES[GID],createdAt:Date.now()});
-  }).catch(()=>{});
+  db.ref('groups/'+GID+'/meta/name').set(LEAGUES[GID]).catch(()=>{});
 }
 function renderLeaguePicker(){
   const box=document.getElementById('league-list');if(!box)return;
@@ -844,13 +855,42 @@ function updatePredBadge(){
   const pid=me?.id;if(!pid)return;
   const pending=Object.values(matches).filter(m=>!m.result);
   const missing=pending.filter(m=>!(preds[m.id]||{})[pid]).length;
-  const btn=document.getElementById('tb-predecir');if(!btn)return;
-  const existing=btn.querySelector('.tab-badge');
-  if(missing>0){
-    if(!existing){const b=document.createElement('span');b.className='tab-badge';btn.querySelector('.tb-icon').appendChild(b);}
-    btn.querySelector('.tab-badge').textContent=missing;
-  }else{if(existing)existing.remove();}
+  setTabBadge('tb-predecir',missing);
+  // Recordatorio + badges de grupos y especiales (solo si aún no están bloqueados).
+  const ge=geStatus(pid);
+  const gMiss=settings.lockedGE?0:(ge.gtotal-ge.gdone);
+  const sMiss=settings.lockedGE?0:(ge.stotal-ge.sdone);
+  setTabBadge('tb-grupos',gMiss);
+  setTabBadge('tb-especiales',sMiss);
+  renderGEReminder(ge);
 }
+function setTabBadge(btnId,n){
+  const btn=document.getElementById(btnId);if(!btn)return;
+  const existing=btn.querySelector('.tab-badge');
+  if(n>0){
+    if(!existing){const b=document.createElement('span');b.className='tab-badge';btn.querySelector('.tb-icon').appendChild(b);}
+    btn.querySelector('.tab-badge').textContent=n;
+  }else if(existing){existing.remove();}
+}
+function geStatus(pid){
+  const g=grpPreds[pid]||{};let gdone=0;Object.keys(GRUPOS).forEach(l=>{if(g[l+'_1']&&g[l+'_2'])gdone++;});
+  const s=specPreds[pid]||{};let sdone=0;['finalist1','finalist2','third','fourth','champion'].forEach(k=>{if(s[k])sdone++;});
+  return {gdone,gtotal:12,sdone,stotal:5};
+}
+function renderGEReminder(ge){
+  const el=document.getElementById('ge-reminder');if(!el)return;
+  if(settings.lockedGE||(ge.gdone>=ge.gtotal&&ge.sdone>=ge.stotal)){el.innerHTML='';return;}
+  const gOk=ge.gdone>=ge.gtotal,sOk=ge.sdone>=ge.stotal;
+  el.innerHTML=`<div class="hero-card hero-card-gold" style="margin-bottom:14px">
+    <h3>⚡ ¡Completa primero tus predicciones!</h3>
+    <p>Antes de que arranque el torneo, asegúrate de llenar:</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+      <button class="btn btn-sm ${gOk?'btn-g':'btn-gold'}" onclick="goTab('grupos')">${gOk?'✓':'📊'} Grupos ${ge.gdone}/${ge.gtotal}</button>
+      <button class="btn btn-sm ${sOk?'btn-g':'btn-gold'}" onclick="goTab('especiales')">${sOk?'✓':'⭐'} Especiales ${ge.sdone}/${ge.stotal}</button>
+    </div>
+  </div>`;
+}
+function goTab(id){const btn=document.getElementById('tb-'+id);if(btn)go(id,btn);}
 
 // ── TABLA ──────────────────────────────────────────────────────
 function renderTabla(){
@@ -998,6 +1038,64 @@ async function fetchTodayMatches(){
 }
 function saveApiKey(){const k=document.getElementById('api-key-inp').value.trim();if(!k)return;gref('settings/apiKey').set(k);toast('API key guardada');}
 
+// ── SEMBRAR CALENDARIO OFICIAL (fase de grupos) ────────────────
+// [nºpartido, grupo, local, visitante, díaDeJunio, horaCentroMéxico(24h), min]
+// Hora Centro de México = UTC-6 fijo → UTC = hora + 6.
+const FIXTURE=[
+ [1,'A','México','Sudáfrica',11,13,0],[2,'A','Corea del Sur','Chequia',11,20,0],
+ [3,'B','Canadá','Bosnia y Herzegovina',12,13,0],[4,'D','Estados Unidos','Paraguay',12,19,0],
+ [8,'B','Qatar','Suiza',13,13,0],[7,'C','Brasil','Marruecos',13,16,0],[5,'C','Haití','Escocia',13,19,0],[6,'D','Australia','Turquía',13,22,0],
+ [10,'E','Alemania','Curazao',14,11,0],[11,'F','Países Bajos','Japón',14,14,0],[9,'E','Costa de Marfil','Ecuador',14,17,0],[12,'F','Suecia','Túnez',14,20,0],
+ [14,'H','España','Cabo Verde',15,10,0],[16,'G','Bélgica','Egipto',15,13,0],[13,'H','Arabia Saudita','Uruguay',15,16,0],[15,'G','Irán','Nueva Zelanda',15,19,0],
+ [17,'I','Francia','Senegal',16,13,0],[18,'I','Irak','Noruega',16,16,0],[19,'J','Argentina','Argelia',16,19,0],[20,'J','Austria','Jordania',16,22,0],
+ [23,'K','Portugal','RD Congo',17,11,0],[22,'L','Inglaterra','Croacia',17,14,0],[21,'L','Ghana','Panamá',17,17,0],[24,'K','Uzbekistán','Colombia',17,20,0],
+ [25,'A','Chequia','Sudáfrica',18,10,0],[26,'B','Suiza','Bosnia y Herzegovina',18,13,0],[27,'B','Canadá','Qatar',18,16,0],[28,'A','México','Corea del Sur',18,19,0],
+ [32,'D','Estados Unidos','Australia',19,13,0],[30,'C','Escocia','Marruecos',19,16,0],[29,'C','Brasil','Haití',19,19,0],[31,'D','Turquía','Paraguay',19,22,0],
+ [35,'F','Países Bajos','Suecia',20,11,0],[33,'E','Alemania','Costa de Marfil',20,14,0],[34,'E','Ecuador','Curazao',20,18,0],[36,'F','Túnez','Japón',20,22,0],
+ [38,'H','España','Arabia Saudita',21,10,0],[39,'G','Bélgica','Irán',21,13,0],[37,'H','Uruguay','Cabo Verde',21,16,0],[40,'G','Nueva Zelanda','Egipto',21,19,0],
+ [43,'J','Argentina','Austria',22,11,0],[42,'I','Francia','Irak',22,15,0],[41,'I','Noruega','Senegal',22,18,0],[44,'J','Jordania','Argelia',22,21,0],
+ [47,'K','Portugal','Uzbekistán',23,11,0],[45,'L','Inglaterra','Ghana',23,14,0],[46,'L','Panamá','Croacia',23,17,0],[48,'K','Colombia','RD Congo',23,20,0],
+ [51,'B','Suiza','Canadá',24,13,0],[52,'B','Bosnia y Herzegovina','Qatar',24,13,0],[49,'C','Escocia','Brasil',24,16,0],[50,'C','Marruecos','Haití',24,16,0],[53,'A','Chequia','México',24,19,0],[54,'A','Sudáfrica','Corea del Sur',24,19,0],
+ [55,'E','Curazao','Costa de Marfil',25,14,0],[56,'E','Ecuador','Alemania',25,14,0],[57,'F','Japón','Suecia',25,17,0],[58,'F','Túnez','Países Bajos',25,17,0],[59,'D','Turquía','Estados Unidos',25,20,0],[60,'D','Paraguay','Australia',25,20,0],
+ [61,'I','Noruega','Francia',26,13,0],[62,'I','Senegal','Irak',26,13,0],[65,'H','Cabo Verde','Arabia Saudita',26,18,0],[66,'H','Uruguay','España',26,18,0],[63,'G','Egipto','Irán',26,21,0],[64,'G','Nueva Zelanda','Bélgica',26,21,0],
+ [67,'L','Panamá','Inglaterra',27,15,0],[68,'L','Croacia','Ghana',27,15,0],[71,'K','Colombia','Portugal',27,17,30],[72,'K','RD Congo','Uzbekistán',27,17,30],[69,'J','Argelia','Austria',27,20,0],[70,'J','Jordania','Argentina',27,20,0]
+];
+function seedMatches(){
+  return FIXTURE.map(f=>{const[no,grp,home,away,d,h,m]=f;
+    const kickoff=Date.UTC(2026,5,d,h+6,m||0);
+    return {id:'wc26_'+no,no,grp,home,away,kickoff,date:d+' jun · Grupo '+grp,dayKey:'2026-06-'+String(d).padStart(2,'0')};
+  }).sort((a,b)=>a.kickoff-b.kickoff||a.no-b.no);
+}
+function dayLabel(dayKey){const[y,mo,d]=dayKey.split('-').map(Number);return new Date(Date.UTC(y,mo-1,d,12)).toLocaleDateString('es',{weekday:'long',day:'numeric',month:'short'});}
+function fTime(ts){return new Date(ts).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});}
+function openSeed(){renderSeed();document.getElementById('modal-seed').classList.remove('hidden');}
+function renderSeed(){
+  const all=seedMatches(),uploaded=all.filter(s=>matches[s.id]).length;
+  const days=[...new Set(all.map(s=>s.dayKey))];
+  let h=`<div class="fb mb8"><div style="font-size:13px;color:var(--muted);font-weight:700">${uploaded}/72 partidos subidos</div><button class="btn btn-gold btn-sm" onclick="uploadSeedAll()">⬆ Subir todos</button></div>`;
+  days.forEach(dk=>{
+    const list=all.filter(s=>s.dayKey===dk),up=list.filter(s=>matches[s.id]).length,pend=list.length-up;
+    h+=`<div class="grp-block"><div class="grp-hdr"><span class="gname" style="font-size:17px;text-transform:capitalize">${dayLabel(dk)}</span>${pend?`<button class="btn btn-p btn-xs" onclick="uploadSeedDay('${dk}')">⬆ Subir ${pend}</button>`:`<span style="font-size:12px;font-weight:700;opacity:.85">✓ Subidos</span>`}</div><div class="grp-body" style="padding:8px 12px">`;
+    list.forEach(s=>{const on=!!matches[s.id];
+      h+=`<div class="pred-mini" style="padding:6px 0"><span style="width:46px;font-weight:800;color:var(--muted)">${fTime(s.kickoff)}</span><span class="bdg bdg-gray" style="margin-right:6px">${s.grp}</span><span style="flex:1">${s.home} vs ${s.away}</span>${on?'<span class="pts-tag pts-saved">✓</span>':''}</div>`;
+    });
+    h+=`</div></div>`;
+  });
+  document.getElementById('seed-body').innerHTML=h;
+}
+function uploadSeedDay(dayKey){
+  const list=seedMatches().filter(s=>s.dayKey===dayKey);let added=0;
+  list.forEach(s=>{if(!matches[s.id]){gref('matches/'+s.id).set({id:s.id,home:s.home,away:s.away,date:s.date,phase:'grupos',kickoff:s.kickoff,result:null,createdAt:s.kickoff});added++;}});
+  toast(added?`${added} partido(s) subido(s)`:'Ese día ya estaba subido',added?'success':'info');
+  setTimeout(renderSeed,300);
+}
+function uploadSeedAll(){
+  const list=seedMatches();let added=0;
+  list.forEach(s=>{if(!matches[s.id]){gref('matches/'+s.id).set({id:s.id,home:s.home,away:s.away,date:s.date,phase:'grupos',kickoff:s.kickoff,result:null,createdAt:s.kickoff});added++;}});
+  toast(added?`${added} partido(s) subido(s)`:'Ya estaban todos subidos',added?'success':'info');
+  setTimeout(renderSeed,300);
+}
+
 // ── PREDICCIONES ──────────────────────────────────────────────
 function renderPreds(){
   const pid=me?.id;if(!pid){document.getElementById('pred-body').innerHTML='';return;}
@@ -1085,7 +1183,7 @@ function savePredTB(mid,pid,h,a,w){gref(`predictions/${mid}/${pid}`).set({home:h
 // ── GRUPOS ──────────────────────────────────────────────────────
 function renderGrupos(){
   const pid=me?.id;if(!pid){document.getElementById('grupos-body').innerHTML='';return;}
-  const locked=settings.locked,gp=grpPreds[pid]||{},gr=settings.groupResults||{};
+  const locked=settings.lockedGE,gp=grpPreds[pid]||{},gr=settings.groupResults||{};
   document.getElementById('grupos-body').innerHTML=Object.entries(GRUPOS).map(([letter,grp])=>{
     const teams=grp.teams,k1=letter+'_1',k2=letter+'_2',res1=gr[k1],res2=gr[k2],pred1=gp[k1],pred2=gp[k2];
     const teamOpts=teams.map(t=>`<option value="${t.n}">${t.n}</option>`).join('');
@@ -1110,6 +1208,7 @@ function renderGrupos(){
   Object.keys(GRUPOS).forEach(l=>{const s1=document.getElementById('g'+l+'1'),s2=document.getElementById('g'+l+'2');if(s1&&gp[l+'_1'])s1.value=gp[l+'_1'];if(s2&&gp[l+'_2'])s2.value=gp[l+'_2'];});
 }
 function saveGrpPred(pid,letter){
+  if(settings.lockedGE){toast('Grupos bloqueados','error');renderGrupos();return;}
   const v1=document.getElementById('g'+letter+'1')?.value,v2=document.getElementById('g'+letter+'2')?.value;
   if(!v1||!v2){toast('Elige los dos equipos','error');return;}
   if(v1===v2){toast('Elige equipos diferentes','error');return;}
@@ -1120,7 +1219,7 @@ function saveGrpPred(pid,letter){
 // ── ESPECIALES ──────────────────────────────────────────────────
 function renderSpecials(){
   const pid=me?.id;if(!pid){document.getElementById('specials-body').innerHTML='';return;}
-  const locked=settings.locked,sp=specPreds[pid]||{},sr=settings.specialResults||{};
+  const locked=settings.lockedGE,sp=specPreds[pid]||{},sr=settings.specialResults||{};
   const teamOpts=ALL48.map(t=>`<option value="${t.n}">${t.n}</option>`).join('');
   function item(key,label,pts,icon){
     const done=sr[key],pred=sp[key],hit=done&&pred&&pred===done;
@@ -1154,7 +1253,7 @@ function renderSpecials(){
   });
   if(isAdmin){const gr=settings.groupResults||{};Object.keys(GRUPOS).forEach(l=>{const s1=document.getElementById('gr-'+l+'1'),s2=document.getElementById('gr-'+l+'2');if(s1&&gr[l+'_1'])s1.value=gr[l+'_1'];if(s2&&gr[l+'_2'])s2.value=gr[l+'_2'];});}
 }
-function saveSp(pid,key){const v=document.getElementById('sp-'+key)?.value;if(!v){toast('Elige un equipo','error');return;}gref(`specPreds/${pid}/${key}`).set(v).then(()=>toast('Guardado ✓'));}
+function saveSp(pid,key){if(settings.lockedGE){toast('Especiales bloqueados','error');renderSpecials();return;}const v=document.getElementById('sp-'+key)?.value;if(!v){toast('Elige un equipo','error');return;}gref(`specPreds/${pid}/${key}`).set(v).then(()=>toast('Guardado ✓'));}
 function saveSpResults(){
   const res={};['finalist1','finalist2','third','fourth','champion'].forEach(k=>{const v=document.getElementById('sr-'+k)?.value;if(v)res[k]=v;});
   gref('settings/specialResults').update(res).then(()=>toast('Resultados guardados'));
@@ -1190,13 +1289,21 @@ function confirmDelPlayer(id){confirm2('Eliminar jugador','¿Estás seguro? Se b
 function toggleLock(){
   const newVal=!settings.locked;
   gref('settings/locked').set(newVal);
-  toast(newVal?'Predicciones bloqueadas 🔒':'Predicciones desbloqueadas 🔓',newVal?'info':'success');
+  toast(newVal?'Partidos bloqueados 🔒':'Partidos desbloqueados 🔓',newVal?'info':'success');
+}
+function toggleLockGE(){
+  const newVal=!settings.lockedGE;
+  gref('settings/lockedGE').set(newVal);
+  toast(newVal?'Grupos y especiales bloqueados 🔒':'Grupos y especiales desbloqueados 🔓',newVal?'info':'success');
 }
 function syncLock(){
-  const locked=settings.locked;
-  ['lock-banner-pred','lock-banner-grupos','lock-banner-sp'].forEach(id=>document.getElementById(id)?.classList.toggle('hidden',!locked));
+  const locked=settings.locked,lge=settings.lockedGE;
+  document.getElementById('lock-banner-pred')?.classList.toggle('hidden',!locked);
+  ['lock-banner-grupos','lock-banner-sp'].forEach(id=>document.getElementById(id)?.classList.toggle('hidden',!lge));
   const btn=document.getElementById('lock-btn');
-  if(btn){btn.textContent=locked?'🔓 Desbloquear':'🔒 Bloquear';btn.className=locked?'btn btn-p btn-sm':'btn btn-sm';}
+  if(btn){btn.textContent=locked?'🔓 Partidos':'🔒 Partidos';btn.className=locked?'btn btn-p btn-sm':'btn btn-sm';}
+  const btn2=document.getElementById('lockge-btn');
+  if(btn2){btn2.textContent=lge?'🔓 Grupos/Especiales':'🔒 Grupos/Especiales';btn2.className=lge?'btn btn-p btn-sm':'btn btn-sm';}
 }
 
 // ── LOGIN ──────────────────────────────────────────────────────────
@@ -1248,7 +1355,7 @@ function syncThemeBtns(){const t=document.documentElement.getAttribute('data-the
 (function(){try{const s=localStorage.getItem('lm_theme');if(s==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();
 
 // ── ADMIN ──────────────────────────────────────────────────────────
-function showUserMenu(){if(!me)return;document.getElementById('um-name').textContent=me.name;document.getElementById('um-pts').textContent=(totals()[me.id]?.pts||0)+' puntos totales';syncThemeBtns();document.getElementById('modal-user').classList.remove('hidden');}
+function showUserMenu(){if(!me)return;document.getElementById('um-name').textContent=me.name;document.getElementById('um-pts').textContent=(totals()[me.id]?.pts||0)+' puntos totales';document.getElementById('btn-changeleague').style.display=isAdmin?'flex':'none';syncThemeBtns();document.getElementById('modal-user').classList.remove('hidden');}
 function checkAdmin(){
   if(document.getElementById('admin-pass').value===ADMIN_PASSWORD){
     isAdmin=true;
