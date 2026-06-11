@@ -782,7 +782,7 @@ let _renderPending=false;
 function renderAll(){
   if(_renderPending)return;
   _renderPending=true;
-  requestAnimationFrame(()=>{_renderPending=false;if(!me)return;_renderAll();});
+  requestAnimationFrame(()=>{_renderPending=false;if(!me){renderLogin();return;}_renderAll();});
 }
 function _renderAll(){renderTabla();renderMatches();renderPreds();renderGrupos();renderSpecials();renderPlayers();updatePredBadge();}
 
