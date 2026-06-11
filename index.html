@@ -189,11 +189,11 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
 .mi:last-child{margin-bottom:0;}
 .mi:hover{border-color:var(--border2);transform:translateY(-1px);box-shadow:var(--shadow-sm);}
 .mi-meta{font-size:10px;color:var(--muted);margin-bottom:9px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-weight:700;}
-.mi-teams{display:flex;align-items:center;gap:10px;}
-.team{flex:1;font-weight:800;font-size:14px;display:flex;align-items:center;gap:7px;line-height:1.2;}
-.team.r{justify-content:flex-end;flex-direction:row-reverse;}
-.score-d{font-family:'Bebas Neue',sans-serif;font-size:24px;min-width:62px;text-align:center;letter-spacing:1px;flex-shrink:0;background:linear-gradient(135deg,var(--gd),var(--g));color:#fff;border-radius:10px;padding:4px 10px;line-height:1.1;box-shadow:var(--shadow-green),inset 0 1px 0 rgba(255,255,255,.18);}
-.score-vs{font-size:11px;color:var(--muted);padding:6px 10px;font-weight:900;letter-spacing:.15em;background:var(--bg);border-radius:8px;border:1px solid var(--border2);min-width:42px;text-align:center;}
+.mi-teams{display:flex;align-items:center;gap:8px;}
+.team{flex:1;min-width:0;font-weight:800;font-size:13.5px;display:flex;align-items:center;gap:6px;line-height:1.2;overflow-wrap:anywhere;}
+.team.r{justify-content:flex-end;flex-direction:row-reverse;text-align:right;}
+.score-d{font-family:'Bebas Neue',sans-serif;font-size:22px;min-width:58px;text-align:center;letter-spacing:1px;flex-shrink:0;background:linear-gradient(135deg,var(--gd),var(--g));color:#fff;border-radius:10px;padding:4px 9px;line-height:1.1;box-shadow:var(--shadow-green),inset 0 1px 0 rgba(255,255,255,.18);}
+.score-vs{font-size:11px;color:var(--muted);padding:6px 9px;font-weight:900;letter-spacing:.12em;background:var(--bg);border-radius:8px;border:1px solid var(--border2);min-width:40px;flex-shrink:0;text-align:center;}
 .mi-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;padding-top:11px;border-top:1px dashed var(--border2);}
 
 /* ── PRED ITEMS ── */
@@ -923,8 +923,14 @@ function renderTabla(){
 const PHL={grupos:'Grupos',octavos:'Octavos',cuartos:'Cuartos',semis:'Semifinal','3er':'3° y 4°',final:'Final'};
 function isKO(ph){return['octavos','cuartos','semis','3er','final'].includes(ph);}
 // Una predicción de un partido se cierra si: el admin bloqueó todo, o ya pasó la hora del saque, o ya hay resultado.
-function matchLocked(m){return !!settings.locked || (m.kickoff && Date.now()>=m.kickoff) || !!m.result;}
+function matchLocked(m){
+  if(m.result)return true;        // ya jugado
+  if(m.predOpen)return false;     // el admin lo reabrió
+  if(settings.locked)return true; // bloqueo global de partidos
+  return !!(m.kickoff && Date.now()>=m.kickoff);
+}
 function kickLabel(m){
+  if(m.predOpen&&!m.result)return `<span class="bdg bdg-blue">🔓 Reabierto</span>`;
   if(!m.kickoff)return '';
   const d=new Date(m.kickoff),now=Date.now();
   const opts={day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'};
@@ -944,9 +950,12 @@ function renderMatches(){
     const pen=fin&&m.result.winner&&+m.result.home===+m.result.away?`<div style="font-size:10px;color:var(--gold);text-align:center;margin-top:2px">pen: ${m.result.winner==='home'?m.home:m.away}</div>`:'';
     const sd=fin?`<div class="score-d">${m.result.home}–${m.result.away}${pen}</div>`:`<span class="score-vs">VS</span>`;
     const hf=teamFlag(m.home),af=teamFlag(m.away);
+    const timeClosed=!fin&&!m.predOpen&&m.kickoff&&Date.now()>=m.kickoff;
+    const reopenBtn=!fin?(m.predOpen?`<button class="btn btn-sm" onclick="recloseMatch('${m.id}')">🔒 Volver a cerrar</button>`:(timeClosed?`<button class="btn btn-gold btn-sm" onclick="reopenMatch('${m.id}')">🔓 Reabrir predicciones</button>`:'')):'';
     const ab=isAdmin?`<div class="mi-actions">
         <button class="btn btn-p btn-sm" onclick="openRes('${m.id}')">📝 ${fin?'Editar resultado':'Resultado'}</button>
         ${fin?`<button class="btn btn-sm" onclick="clearResult('${m.id}')">↩ Quitar resultado</button>`:''}
+        ${reopenBtn}
         <button class="btn btn-g btn-sm" onclick="openEditMatch('${m.id}')">✏️ Editar</button>
         <button class="btn btn-d btn-sm" onclick="confirmDelMatch('${m.id}')">Eliminar</button>
       </div>`:'';
@@ -1020,6 +1029,8 @@ function openRes(id){
   setTimeout(()=>document.getElementById('res-h').focus(),200);
 }
 function clearResult(id){confirm2('Quitar resultado','¿Borrar el resultado de este partido? Volverá a quedar pendiente.',()=>{gref('matches/'+id+'/result').remove();toast('Resultado eliminado','info');});}
+function reopenMatch(id){gref('matches/'+id+'/predOpen').set(true).then(()=>toast('Predicciones reabiertas para este partido','info'));}
+function recloseMatch(id){gref('matches/'+id+'/predOpen').remove().then(()=>toast('Partido cerrado de nuevo','info'));}
 function checkTB(){if(!editMId)return;const h=parseInt(document.getElementById('res-h').value),a=parseInt(document.getElementById('res-a').value);document.getElementById('tb-zone').classList.toggle('hidden',!(isKO(matches[editMId]?.phase)&&!isNaN(h)&&!isNaN(a)&&h===a));}
 function selTB(s){tbWin=s;document.getElementById('tb-hb').className='btn btn-sm btn-full '+(s==='home'?'btn-p':'btn-g');document.getElementById('tb-ab').className='btn btn-sm btn-full '+(s==='away'?'btn-p':'btn-g');}
 function saveResult(){
