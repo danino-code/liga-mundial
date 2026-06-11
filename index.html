@@ -846,7 +846,17 @@ function calcScore(m,p){
   const pw=p.winner||(+p.home>+p.away?'home':+p.away>+p.home?'away':'draw');
   return rw===pw?1:0;
 }
-function spPts(pid){let p=0;const s=specPreds[pid]||{},r=settings.specialResults||{};if(s.champion&&r.champion&&s.champion===r.champion)p+=10;['finalist1','finalist2','third','fourth'].forEach(k=>{if(s[k]&&r[k]&&s[k]===r[k])p+=5;});return p;}
+function spPts(pid){
+  let p=0;const s=specPreds[pid]||{},r=settings.specialResults||{};
+  if(s.champion&&r.champion&&s.champion===r.champion)p+=10;
+  // Finalistas: cuenta +5 por cada acierto sin importar el orden (finalista 1/2 son intercambiables).
+  const actualFin=[r.finalist1,r.finalist2].filter(Boolean);
+  const used=new Set();
+  [s.finalist1,s.finalist2].filter(Boolean).forEach(t=>{if(actualFin.includes(t)&&!used.has(t)){p+=5;used.add(t);}});
+  // 3er y 4to lugar sí dependen del puesto.
+  ['third','fourth'].forEach(k=>{if(s[k]&&r[k]&&s[k]===r[k])p+=5;});
+  return p;
+}
 function grpPts(pid){let p=0;const g=grpPreds[pid]||{},r=settings.groupResults||{};Object.keys(GRUPOS).forEach(l=>{if(g[l+'_1']&&r[l+'_1']&&g[l+'_1']===r[l+'_1'])p+=2;if(g[l+'_2']&&r[l+'_2']&&g[l+'_2']===r[l+'_2'])p+=2;});return p;}
 function totals(){const sc={};Object.values(players).forEach(p=>{sc[p.id]={pts:0,played:0,exact:0};});Object.values(matches).forEach(m=>{if(!m.result)return;Object.values(players).forEach(p=>{const pr=(preds[m.id]||{})[p.id];if(pr){const s=calcScore(m,pr);if(s!==null){sc[p.id].pts+=s;sc[p.id].played++;if(s===3)sc[p.id].exact++;}}});});Object.values(players).forEach(p=>{sc[p.id].pts+=spPts(p.id)+grpPts(p.id);});return sc;}
 
@@ -1221,14 +1231,17 @@ function renderSpecials(){
   const pid=me?.id;if(!pid){document.getElementById('specials-body').innerHTML='';return;}
   const locked=settings.lockedGE,sp=specPreds[pid]||{},sr=settings.specialResults||{};
   const teamOpts=ALL48.map(t=>`<option value="${t.n}">${t.n}</option>`).join('');
+  const finSet=[sr.finalist1,sr.finalist2].filter(Boolean);
   function item(key,label,pts,icon){
-    const done=sr[key],pred=sp[key],hit=done&&pred&&pred===done;
+    const isFin=(key==='finalist1'||key==='finalist2');
+    const done=sr[key],pred=sp[key];
+    const hit=isFin?(pred&&finSet.includes(pred)):(done&&pred&&pred===done);
     const doneFlag=done?teamFlag(done):'';
     if(done)return `<div class="sp-item ${hit?'hit':''}"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:5px">${icon} ${label} <span class="bdg bdg-gold">+${pts} pts</span></div><div style="font-size:14px;font-weight:800;display:flex;align-items:center;gap:6px">${doneFlag}${done} ${hit?'<span class="pts-tag pts-3">✓ Acertaste</span>':'<span class="pts-tag pts-0">Tu pred: '+(pred||'–')+'</span>'}</div></div>`;
     if(locked)return `<div class="sp-item"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:5px">${icon} ${label} <span class="bdg bdg-gold">+${pts} pts</span></div><div style="font-size:13px;color:var(--muted)">Tu predicción: <strong>${pred||'–'}</strong></div></div>`;
     return `<div class="sp-item"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px">${icon} ${label} <span class="bdg bdg-gold">+${pts} pts</span></div><div class="flex"><select id="sp-${key}" style="flex:1;font-size:14px"><option value="">— Elige selección —</option>${teamOpts}</select><button class="btn btn-p btn-sm" onclick="saveSp('${pid}','${key}')">Guardar</button></div>${pred?`<div style="font-size:12px;color:var(--g);margin-top:6px;font-weight:700">✓ ${pred}</div>`:''}</div>`;
   }
-  let h=`<div class="card">${item('finalist1','Finalista 1','5','🥈')}${item('finalist2','Finalista 2','5','🥈')}${item('third','3er lugar','5','🥉')}${item('fourth','4to lugar','5','🥉')}${item('champion','Campeón del mundo','10','🏆')}</div>`;
+  let h=`<div class="card"><div style="font-size:12px;color:var(--muted);font-weight:700;margin-bottom:10px;line-height:1.5">🥈 Los dos finalistas cuentan sin importar el orden: ganas +5 por cada uno que aciertes.</div>${item('finalist1','Finalista 1','5','🥈')}${item('finalist2','Finalista 2','5','🥈')}${item('third','3er lugar','5','🥉')}${item('fourth','4to lugar','5','🥉')}${item('champion','Campeón del mundo','10','🏆')}</div>`;
   if(isAdmin){
     h+=`<div class="card" style="border-color:var(--gold)"><div class="ctitle">Admin — Resultados finales</div>
       <div class="g2">
