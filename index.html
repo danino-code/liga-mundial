@@ -168,6 +168,13 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
 .r3{background:radial-gradient(circle at 30% 30%,#f0c590,#cd7f32 50%,#7a4818 100%);color:#2d1605;box-shadow:0 4px 12px rgba(205,127,50,.5),inset 0 -2px 0 rgba(0,0,0,.15),inset 0 2px 0 rgba(255,255,255,.3);}
 .rn{background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--muted);font-weight:700;box-shadow:inset 0 0 0 1px var(--border2);}
 .pts-big{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:1px;font-weight:400;line-height:1;background:linear-gradient(180deg,var(--g2) 0%,var(--gd) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;}
+.streakball{display:inline-block;font-size:13px;animation:ballbob 1.4s ease-in-out infinite;}
+@keyframes ballbob{0%,100%{transform:translateY(0) rotate(-8deg);}50%{transform:translateY(-3px) rotate(8deg);}}
+.mv{font-size:11px;font-weight:900;display:inline-block;}
+.mv-up{color:var(--g);animation:mvup .5s ease;}
+.mv-down{color:var(--red);animation:mvdown .5s ease;}
+@keyframes mvup{0%{transform:translateY(4px);opacity:0;}100%{transform:translateY(0);opacity:1;}}
+@keyframes mvdown{0%{transform:translateY(-4px);opacity:0;}100%{transform:translateY(0);opacity:1;}}
 
 /* ── STATS ROW ── */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
@@ -776,6 +783,7 @@ function teamFlag(name,size){const c=teamCode(name);return c?flagImg(c,size):'';
 
 let players={},matches={},preds={},specPreds={},grpPreds={},settings={};
 let me=null,isAdmin=false,editMId=null,tbWin=null,phaseFilter='all';
+let prevRanks={},moveState={},moveBaselineCount=-1;
 let _renderPending=false;
 
 // ── DEBOUNCED RENDER ──────────────────────────────────────────
@@ -903,6 +911,12 @@ function renderGEReminder(ge){
 function goTab(id){const btn=document.getElementById('tb-'+id);if(btn)go(id,btn);}
 
 // ── TABLA ──────────────────────────────────────────────────────
+function streak(pid){
+  const fin=Object.values(matches).filter(m=>m.result).sort((a,b)=>a.createdAt-b.createdAt);
+  let s=0;
+  for(let i=fin.length-1;i>=0;i--){const pr=(preds[fin[i].id]||{})[pid];const sec=pr?calcScore(fin[i],pr):0;if(sec&&sec>0)s++;else break;}
+  return s;
+}
 function renderTabla(){
   const sc=totals(),sorted=Object.values(players).sort((a,b)=>sc[b.id].pts-sc[a.id].pts);
   const fin=Object.values(matches).filter(m=>m.result).length;
@@ -911,10 +925,20 @@ function renderTabla(){
     <div class="sc"><div class="v">${fin}</div><div class="l">Jugados</div></div>
     <div class="sc"><div class="v">${Object.keys(matches).length-fin}</div><div class="l">Por jugar</div></div>`;
   if(!sorted.length){document.getElementById('tabla-body').innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-txt">Sin jugadores aún</div></div>';return;}
+  // Ranks actuales
+  const curRanks={};sorted.forEach((p,i)=>curRanks[p.id]=i+1);
+  // Calcula subidas/bajadas solo cuando cambia el nº de resultados (no en cada re-render).
+  if(fin!==moveBaselineCount){
+    const ms={};
+    sorted.forEach(p=>{const prev=prevRanks[p.id];if(prev!==undefined){if(curRanks[p.id]<prev)ms[p.id]='up';else if(curRanks[p.id]>prev)ms[p.id]='down';}});
+    moveState=ms;prevRanks={...curRanks};moveBaselineCount=fin;
+  }
   let h=`<table class="tabla"><thead><tr><th style="width:32px"></th><th>Jugador</th><th style="text-align:center">J</th><th style="text-align:center">Exactos</th><th style="text-align:center">Pts</th></tr></thead><tbody>`;
   sorted.forEach((p,i)=>{
     const rk=i+1,rc=rk===1?'r1':rk===2?'r2':rk===3?'r3':'rn',s=sc[p.id],isme=me&&p.id===me.id;
-    h+=`<tr class="${isme?'me':''}"><td><div class="rank ${rc}">${rk}</div></td><td style="font-size:14px;font-weight:800">${p.name}${isme?' <span style="font-size:11px;color:var(--g);font-weight:600">(tú)</span>':''}</td><td style="text-align:center;color:var(--muted);font-size:13px">${s.played}</td><td style="text-align:center;color:var(--g);font-size:13px;font-weight:800">${s.exact}</td><td style="text-align:center"><span class="pts-big">${s.pts}</span></td></tr>`;
+    const st=streak(p.id),ball=st>=2?` <span class="streakball" title="En racha: ${st} aciertos seguidos">⚽</span>`:'';
+    const mv=moveState[p.id]==='up'?' <span class="mv mv-up">▲</span>':moveState[p.id]==='down'?' <span class="mv mv-down">▼</span>':'';
+    h+=`<tr class="${isme?'me':''}"><td><div class="rank ${rc}">${rk}</div></td><td style="font-size:14px;font-weight:800">${p.name}${isme?' <span style="font-size:11px;color:var(--g);font-weight:600">(tú)</span>':''}${ball}${mv}</td><td style="text-align:center;color:var(--muted);font-size:13px">${s.played}</td><td style="text-align:center;color:var(--g);font-size:13px;font-weight:800">${s.exact}</td><td style="text-align:center"><span class="pts-big">${s.pts}</span></td></tr>`;
   });
   document.getElementById('tabla-body').innerHTML=h+'</tbody></table>';
 }
@@ -947,7 +971,7 @@ function renderMatches(){
   if(!list.length){document.getElementById('matches-body').innerHTML='<div class="empty"><div class="empty-icon">📋</div><div class="empty-txt">No hay partidos en esta fase</div></div>';return;}
   document.getElementById('matches-body').innerHTML=list.map(m=>{
     const fin=!!m.result;
-    const pen=fin&&m.result.winner&&+m.result.home===+m.result.away?`<div style="font-size:10px;color:var(--gold);text-align:center;margin-top:2px">pen: ${m.result.winner==='home'?m.home:m.away}</div>`:'';
+    const pen=fin&&isKO(m.phase)&&(m.result.winner==='home'||m.result.winner==='away')&&+m.result.home===+m.result.away?`<div style="font-size:10px;color:var(--gold);text-align:center;margin-top:2px">pen: ${m.result.winner==='home'?m.home:m.away}</div>`:'';
     const sd=fin?`<div class="score-d">${m.result.home}–${m.result.away}${pen}</div>`:`<span class="score-vs">VS</span>`;
     const hf=teamFlag(m.home),af=teamFlag(m.away);
     const timeClosed=!fin&&!m.predOpen&&m.kickoff&&Date.now()>=m.kickoff;
