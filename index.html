@@ -235,6 +235,10 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
 .pl-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 4px;cursor:pointer;user-select:none;border-radius:var(--r2);transition:background .15s;}
 .pl-hdr:hover{background:var(--bg);}.pl-hdr:active{background:var(--bg2);}
 .pl-detail{display:none;padding:0 4px 14px;}.pl-detail.open{display:block;}
+.pl-live{display:flex;flex-direction:column;gap:5px;padding:0 4px 10px;margin-top:-4px;}
+.pl-live-row{display:flex;align-items:center;gap:8px;background:linear-gradient(90deg,var(--redl),transparent);border-left:3px solid var(--red);border-radius:8px;padding:7px 10px;}
+.pl-live-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;box-shadow:0 0 0 3px rgba(200,49,62,.18);animation:pulse 1.6s ease-in-out infinite;}
+.pl-live-tt{font-size:12.5px;font-weight:700;}.pl-live-tt b{color:var(--red);font-weight:900;}
 .pred-mini{font-size:12px;color:var(--muted);padding:5px 0;display:flex;gap:8px;align-items:center;font-weight:600;}
 
 /* ── MODALS ── */
@@ -779,6 +783,24 @@ function flagImg(code,size='sm'){
   return `<img class="${cls}" src="https://flagcdn.com/w40/${code}.png" alt="" loading="lazy" onerror="this.style.display='none'">`;
 }
 function teamCode(name){for(const g of Object.values(GRUPOS)){const t=g.teams.find(t=>t.n===name);if(t)return t.c;}return null;}
+function teamGroup(name){for(const[l,g] of Object.entries(GRUPOS)){if(g.teams.find(t=>t.n===name))return l;}return null;}
+// Desempate: más puntos; si empatan, más marcadores exactos.
+function cmpPlayers(sc){return (a,b)=>((sc[b.id]?.pts||0)-(sc[a.id]?.pts||0))||((sc[b.id]?.exact||0)-(sc[a.id]?.exact||0));}
+// Tabla real de grupos calculada con los resultados cargados (V=3, E=1, D=0).
+function groupStandings(){
+  const st={};
+  Object.entries(GRUPOS).forEach(([l,g])=>{st[l]={};g.teams.forEach(t=>{st[l][t.n]={n:t.n,c:t.c,pj:0,g:0,e:0,p:0,gf:0,gc:0,pts:0};});});
+  Object.values(matches).forEach(m=>{
+    if(m.phase!=='grupos'||!m.result)return;
+    const l=teamGroup(m.home);if(!l||!st[l]||!st[l][m.home]||!st[l][m.away])return;
+    const h=+m.result.home,a=+m.result.away,H=st[l][m.home],A=st[l][m.away];
+    H.pj++;A.pj++;H.gf+=h;H.gc+=a;A.gf+=a;A.gc+=h;
+    if(h>a){H.g++;A.p++;H.pts+=3;}else if(a>h){A.g++;H.p++;A.pts+=3;}else{H.e++;A.e++;H.pts++;A.pts++;}
+  });
+  const out={};
+  Object.keys(st).forEach(l=>{out[l]=Object.values(st[l]).sort((x,y)=>y.pts-x.pts||(y.gf-y.gc)-(x.gf-x.gc)||y.gf-x.gf||x.n.localeCompare(y.n));});
+  return out;
+}
 function teamFlag(name,size){const c=teamCode(name);return c?flagImg(c,size):'';}
 
 let players={},matches={},preds={},specPreds={},grpPreds={},settings={};
@@ -918,7 +940,7 @@ function streak(pid){
   return s;
 }
 function renderTabla(){
-  const sc=totals(),sorted=Object.values(players).sort((a,b)=>sc[b.id].pts-sc[a.id].pts);
+  const sc=totals(),sorted=Object.values(players).sort(cmpPlayers(sc));
   const fin=Object.values(matches).filter(m=>m.result).length;
   document.getElementById('stats-row').innerHTML=`
     <div class="sc"><div class="v">${Object.keys(players).length}</div><div class="l">Jugadores</div></div>
@@ -1229,14 +1251,19 @@ function savePredTB(mid,pid,h,a,w){gref(`predictions/${mid}/${pid}`).set({home:h
 function renderGrupos(){
   const pid=me?.id;if(!pid){document.getElementById('grupos-body').innerHTML='';return;}
   const locked=settings.lockedGE,gp=grpPreds[pid]||{},gr=settings.groupResults||{};
+  const gs=groupStandings();
   document.getElementById('grupos-body').innerHTML=Object.entries(GRUPOS).map(([letter,grp])=>{
     const teams=grp.teams,k1=letter+'_1',k2=letter+'_2',res1=gr[k1],res2=gr[k2],pred1=gp[k1],pred2=gp[k2];
     const teamOpts=teams.map(t=>`<option value="${t.n}">${t.n}</option>`).join('');
     const pts=(pred1&&res1&&pred1===res1?2:0)+(pred2&&res2&&pred2===res2?2:0);
-    let body=teams.map(t=>{
-      const isp1=pred1===t.n,isp2=pred2===t.n,isr1=res1===t.n,isr2=res2===t.n;
-      return `<div class="grp-team">${flagImg(t.c)}<span style="font-size:14px;font-weight:700;flex:1">${t.n}</span>${isr1?'<span class="bdg bdg-g">1° ✓</span>':isr2?'<span class="bdg bdg-g">2° ✓</span>':''}${!res1&&isp1?'<span class="bdg bdg-blue">Tu 1°</span>':''}${!res2&&isp2?'<span class="bdg bdg-blue">Tu 2°</span>':''}</div>`;
-    }).join('');
+    let body=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="color:var(--muted);font-size:9.5px;text-transform:uppercase;letter-spacing:.05em"><th style="text-align:left;padding:3px 2px">Equipo</th><th style="padding:3px 4px">PJ</th><th style="padding:3px 4px">DG</th><th style="padding:3px 4px">Pts</th></tr></thead><tbody>`;
+    gs[letter].forEach((t,idx)=>{
+      const top2=idx<2,isp1=pred1===t.n,isp2=pred2===t.n,isr1=res1===t.n,isr2=res2===t.n;
+      const badges=`${isr1?'<span class="bdg bdg-g">1°✓</span>':isr2?'<span class="bdg bdg-g">2°✓</span>':''}${!res1&&isp1?'<span class="bdg bdg-blue">Tu 1°</span>':''}${!res2&&isp2?'<span class="bdg bdg-blue">Tu 2°</span>':''}`;
+      const dg=t.gf-t.gc,dgs=(dg>0?'+':'')+dg;
+      body+=`<tr style="${top2?'background:var(--gl);':''}border-top:1px solid var(--border)"><td style="padding:7px 2px"><div style="display:flex;align-items:center;gap:6px"><span style="width:12px;color:var(--muted);font-size:11px;font-weight:800">${idx+1}</span>${flagImg(t.c)}<span style="font-weight:700">${t.n}</span> ${badges}</div></td><td style="text-align:center;color:var(--muted)">${t.pj}</td><td style="text-align:center;color:var(--muted)">${dgs}</td><td style="text-align:center;font-weight:900;color:var(--gd)">${t.pts}</td></tr>`;
+    });
+    body+=`</tbody></table>`;
     if(res1&&res2){body+=`<div style="padding-top:10px;margin-top:8px;border-top:1px solid var(--border);font-size:13px">Resultado: <strong>${res1}</strong> (1°) · <strong>${res2}</strong> (2°) → <span style="color:var(--g);font-weight:800">+${pts} pts</span></div>`;}
     else if(!locked){
       body+=`<div class="grp-selects">
@@ -1316,14 +1343,21 @@ function saveGrpResult(l){
 function renderPlayers(){
   const list=Object.values(players),sc=totals();
   if(!list.length){document.getElementById('players-body').innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-txt">Sin jugadores</div></div>';return;}
-  document.getElementById('players-body').innerHTML=list.sort((a,b)=>sc[b.id].pts-sc[a.id].pts).map((p)=>{
+  document.getElementById('players-body').innerHTML=list.sort(cmpPlayers(sc)).map((p)=>{
     const s=sc[p.id],isme=me&&p.id===me.id,pend=Object.values(matches).filter(m=>!m.result);
     const predCnt=pend.filter(m=>(preds[m.id]||{})[p.id]).length;
-    return `<div class="pl-row"><div class="pl-hdr" onclick="togglePD('${p.id}')"><div class="flex"><span style="font-size:14px;font-weight:800">${p.name}${isme?' <span style="font-size:11px;color:var(--g);font-weight:600">(tú)</span>':''}</span></div><div class="flex">${pend.length?`<span class="bdg ${predCnt>0?'bdg-g':'bdg-gold'}">${predCnt}/${pend.length}</span>`:''}<span class="pts-big" style="font-size:20px;margin-left:6px">${s.pts}pts</span><span style="font-size:11px;color:var(--muted);margin-left:3px">▾</span></div></div><div class="pl-detail" id="pld-${p.id}">${buildPD(p.id)}${isAdmin?`<div class="flex mt8" style="gap:6px"><button class="btn btn-g btn-xs" onclick="openRename('${p.id}')">✏️ Renombrar</button><button class="btn btn-d btn-xs" onclick="confirmDelPlayer('${p.id}')">Eliminar</button></div>`:''}</div></div>`;
+    return `<div class="pl-row"><div class="pl-hdr" onclick="togglePD('${p.id}')"><div class="flex"><span style="font-size:14px;font-weight:800">${p.name}${isme?' <span style="font-size:11px;color:var(--g);font-weight:600">(tú)</span>':''}</span></div><div class="flex">${pend.length?`<span class="bdg ${predCnt>0?'bdg-g':'bdg-gold'}">${predCnt}/${pend.length}</span>`:''}<span class="pts-big" style="font-size:20px;margin-left:6px">${s.pts}pts</span><span style="font-size:11px;color:var(--muted);margin-left:3px">▾</span></div></div>${buildLiveStrip(p.id)}<div class="pl-detail" id="pld-${p.id}">${buildPD(p.id)}${isAdmin?`<div class="flex mt8" style="gap:6px"><button class="btn btn-g btn-xs" onclick="openRename('${p.id}')">✏️ Renombrar</button><button class="btn btn-d btn-xs" onclick="confirmDelPlayer('${p.id}')">Eliminar</button></div>`:''}</div></div>`;
   }).join('');
 }
+function buildLiveStrip(pid){
+  const live=Object.values(matches).filter(m=>!m.result&&matchLocked(m)).sort((a,b)=>(a.kickoff||a.createdAt)-(b.kickoff||b.createdAt));
+  if(!live.length)return '';
+  return `<div class="pl-live">`+live.map(m=>{const pr=(preds[m.id]||{})[pid];
+    return `<div class="pl-live-row"><span class="pl-live-dot"></span><span class="pl-live-tt">${m.home} <b>${pr?pr.home+'–'+pr.away:'sin pred.'}</b> ${m.away}</span></div>`;
+  }).join('')+`</div>`;
+}
 function buildPD(pid){
-  const fin=Object.values(matches).filter(m=>m.result).sort((a,b)=>a.createdAt-b.createdAt);
+  const fin=Object.values(matches).filter(m=>m.result).sort((a,b)=>b.createdAt-a.createdAt);
   const pend=Object.values(matches).filter(m=>!m.result).sort((a,b)=>a.createdAt-b.createdAt);
   let h='';
   if(pend.length){h+='<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em">Pendientes</div>';pend.forEach(m=>{const pr=(preds[m.id]||{})[pid];h+=`<div class="pred-mini"><span style="flex:1">${m.home} vs ${m.away}</span>${pr?`<span class="pts-tag pts-saved">✓ ${pr.home}–${pr.away}</span>`:'<span class="pts-tag pts-np">sin pred.</span>'}</div>`;});}
@@ -1360,7 +1394,7 @@ function renderLogin(){
   const el=document.getElementById('player-grid'),nm=document.getElementById('no-players-msg');
   if(!list.length){el.innerHTML='';nm.style.display='block';return;}
   nm.style.display='none';
-  el.innerHTML=list.sort((a,b)=>(sc[b.id]?.pts||0)-(sc[a.id]?.pts||0)).map((p,i)=>{
+  el.innerHTML=list.sort(cmpPlayers(sc)).map((p,i)=>{
     const rkc=i===0?'gold':i===1?'silver':i===2?'bronze':'';
     return `<div class="pl-card" onclick="loginAs('${p.id}')"><div class="pl-rank ${rkc}">${i+1}</div><div class="pl-info"><div class="pl-name">${p.name}</div><div class="pl-meta">${sc[p.id]?.played||0} partidos · ${sc[p.id]?.pts||0} pts</div></div><div class="pl-pts-big">${sc[p.id]?.pts||0}</div></div>`;
   }).join('');
