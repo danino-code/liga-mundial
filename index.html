@@ -226,6 +226,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
 .pts-tag{font-size:10px;font-weight:900;padding:4px 10px;border-radius:20px;white-space:nowrap;letter-spacing:.04em;text-transform:uppercase;}
 .pts-3{background:linear-gradient(135deg,#1eb574,#15814a);color:#fff;box-shadow:0 2px 6px rgba(21,129,74,.35);}
 .pts-1{background:linear-gradient(135deg,var(--gold2),var(--gold));color:#fff;box-shadow:0 2px 6px rgba(200,147,10,.35);}
+.pts-2{background:linear-gradient(135deg,#2aa0c8,#1d6dba);color:#fff;box-shadow:0 2px 6px rgba(29,109,186,.35);}
 .pts-0{background:var(--bg);color:var(--muted);border:1px solid var(--border2);}
 .pts-np{background:var(--bg);color:var(--muted);font-weight:700;border:1px dashed var(--border2);}
 .pts-saved{background:var(--bluel);color:var(--blue);border:1px solid rgba(29,93,186,.2);}
@@ -561,7 +562,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
           <div style="background:var(--bg);padding:13px;border-radius:var(--r2);font-size:13px;color:var(--muted);line-height:1.8;margin-top:4px">
             <strong style="color:var(--txt)">Grupos:</strong> +2 pts por cada equipo que clasificas correctamente.<br>
             <strong style="color:var(--txt)">Especiales:</strong> Finalistas +5 c/u · 3er y 4to +5 c/u · Campeón +10.<br>
-            <strong style="color:var(--txt)">Eliminación con empate:</strong> elige también quien gana en penaltis.
+            <strong style="color:var(--txt)">Eliminatorias con empate:</strong> si predices empate y termina en empate: marcador exacto = 3; si no es exacto = 1, y +1 más si aciertas quién gana en penaltis (hasta 2).
           </div>
         </div>
         <div class="card" style="text-align:center;padding:1.8rem">
@@ -954,10 +955,24 @@ function renderLeaguePicker(){
 function calcScore(m,p){
   if(!m.result||!p)return null;
   const r=m.result;
-  if(+p.home===+r.home&&+p.away===+r.away)return 3;
+  if(+p.home===+r.home&&+p.away===+r.away)return 3;          // marcador exacto
   const rw=r.winner||(+r.home>+r.away?'home':+r.away>+r.home?'away':'draw');
-  const pw=p.winner||(+p.home>+p.away?'home':+p.away>+p.home?'away':'draw');
-  return rw===pw?1:0;
+  const pDraw=+p.home===+p.away, rDraw=+r.home===+r.away;
+  if(pDraw){
+    if(!rDraw)return 0;                                       // predijo empate pero hubo ganador en los 90'
+    let pts=1;                                                // acertó que sería empate
+    if(p.tiebreaker&&p.tiebreaker===r.winner)pts++;           // +1 si además acertó quién gana en penaltis
+    return pts;
+  }
+  const pw=+p.home>+p.away?'home':'away';
+  return pw===rw?1:0;                                         // predijo ganador: 1 si avanza el que dijo
+}
+function ptsTag(s){
+  if(s===3)return '<span class="pts-tag pts-3">+3</span>';
+  if(s===2)return '<span class="pts-tag pts-2">+2</span>';
+  if(s===1)return '<span class="pts-tag pts-1">+1</span>';
+  if(s===0)return '<span class="pts-tag pts-0">0</span>';
+  return '<span class="pts-tag pts-np">–</span>';
 }
 function spPts(pid){
   let p=0;const s=specPreds[pid]||{},r=settings.specialResults||{};
@@ -1304,7 +1319,7 @@ function renderPreds(){
     let mp=0;done.forEach(m=>{const pr=(preds[m.id]||{})[pid];if(pr){const s=calcScore(m,pr);if(s!==null)mp+=s;}});
     h+=`<div class="card"><div class="fb mb8"><div class="ctitle" style="margin:0">Mis resultados</div><span style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--g)">${mp} pts</span></div>`;
     done.forEach(m=>{const pr=(preds[m.id]||{})[pid],s=pr?calcScore(m,pr):null;
-      const pb=s===3?'<span class="pts-tag pts-3">+3</span>':s===1?'<span class="pts-tag pts-1">+1</span>':s===0?'<span class="pts-tag pts-0">0</span>':'<span class="pts-tag pts-np">–</span>';
+      const pb=ptsTag(s);
       const tb2=pr&&pr.tiebreaker?` (pen: ${pr.tiebreaker==='home'?m.home:m.away})`:'';
       const hf=teamFlag(m.home),af=teamFlag(m.away);
       h+=`<div class="pi">
@@ -1458,7 +1473,7 @@ function buildPD(pid){
   const pend=Object.values(matches).filter(m=>!m.result).sort((a,b)=>a.createdAt-b.createdAt);
   let h='';
   if(pend.length){h+='<div style="font-size:11px;font-weight:800;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.07em">Pendientes</div>';pend.forEach(m=>{const pr=(preds[m.id]||{})[pid];h+=`<div class="pred-mini"><span style="flex:1">${m.home} vs ${m.away}</span>${pr?`<span class="pts-tag pts-saved">✓ ${pr.home}–${pr.away}</span>`:'<span class="pts-tag pts-np">sin pred.</span>'}</div>`;});}
-  if(fin.length){h+='<div style="font-size:11px;font-weight:800;color:var(--muted);margin:9px 0 5px;text-transform:uppercase;letter-spacing:.07em">Resultados</div>';fin.forEach(m=>{const pr=(preds[m.id]||{})[pid],s=pr?calcScore(m,pr):null;const pb=s===3?'<span class="pts-tag pts-3">+3</span>':s===1?'<span class="pts-tag pts-1">+1</span>':s===0?'<span class="pts-tag pts-0">0</span>':'<span class="pts-tag pts-np">–</span>';h+=`<div class="pred-mini"><span style="flex:1">${m.home} ${m.result.home}–${m.result.away} ${m.away}</span><span style="color:var(--muted)">${pr?pr.home+'–'+pr.away:'–'}</span>${pb}</div>`;});}
+  if(fin.length){h+='<div style="font-size:11px;font-weight:800;color:var(--muted);margin:9px 0 5px;text-transform:uppercase;letter-spacing:.07em">Resultados</div>';fin.forEach(m=>{const pr=(preds[m.id]||{})[pid],s=pr?calcScore(m,pr):null;const pb=ptsTag(s);h+=`<div class="pred-mini"><span style="flex:1">${m.home} ${m.result.home}–${m.result.away} ${m.away}</span><span style="color:var(--muted)">${pr?pr.home+'–'+pr.away:'–'}</span>${pb}</div>`;});}
   return h||'<div style="font-size:12px;color:var(--muted)">Sin partidos aún</div>';
 }
 function togglePD(pid){document.getElementById('pld-'+pid)?.classList.toggle('open');}
