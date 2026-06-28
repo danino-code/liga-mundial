@@ -562,7 +562,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
           <div style="background:var(--bg);padding:13px;border-radius:var(--r2);font-size:13px;color:var(--muted);line-height:1.8;margin-top:4px">
             <strong style="color:var(--txt)">Grupos:</strong> +2 pts por cada equipo que clasificas correctamente.<br>
             <strong style="color:var(--txt)">Especiales:</strong> Finalistas +5 c/u · 3er y 4to +5 c/u · Campeón +10.<br>
-            <strong style="color:var(--txt)">Eliminatorias con empate:</strong> si predices empate y termina en empate: marcador exacto = 3; si no es exacto = 1, y +1 más si aciertas quién gana en penaltis (hasta 2).
+            <strong style="color:var(--txt)">Eliminatorias con empate:</strong> si predices empate y termina en empate: 1 punto (o 3 si el marcador es exacto), y <strong>+1 más</strong> si aciertas quién gana en penaltis. Así, marcador exacto + penaltis = 4.
           </div>
         </div>
         <div class="card" style="text-align:center;padding:1.8rem">
@@ -846,7 +846,7 @@ function _renderAll(){renderTabla();renderMatches();renderPreds();renderGrupos()
 function agoLabel(ts){const d=Date.now()-ts;if(d<0)return 'pronto';const m=Math.round(d/60000);if(m<1)return 'ahora';if(m<60)return 'hace '+m+' min';const h=Math.round(m/60);if(h<24)return 'hace '+h+' h';return 'hace '+Math.round(h/24)+' d';}
 function buildFeed(){
   const ev=[],pname=id=>players[id]?.name||'Alguien';
-  Object.values(matches).forEach(m=>{if(!m.result)return;Object.keys(players).forEach(pid=>{const pr=(preds[m.id]||{})[pid];if(pr&&calcScore(m,pr)===3)ev.push({ts:(m.kickoff||m.createdAt||0),icon:'🎯',cls:'fd-exact',text:`<b>${pname(pid)}</b> clavó el marcador exacto: ${m.home} ${m.result.home}–${m.result.away} ${m.away}`});});});
+  Object.values(matches).forEach(m=>{if(!m.result)return;Object.keys(players).forEach(pid=>{const pr=(preds[m.id]||{})[pid];if(pr&&+pr.home===+m.result.home&&+pr.away===+m.result.away)ev.push({ts:(m.kickoff||m.createdAt||0),icon:'🎯',cls:'fd-exact',text:`<b>${pname(pid)}</b> clavó el marcador exacto: ${m.home} ${m.result.home}–${m.result.away} ${m.away}`});});});
   const gr=settings.groupResults||{};
   Object.keys(GRUPOS).forEach(l=>{[['_1','1°'],['_2','2°']].forEach(([suf,lbl])=>{const real=gr[l+suf];if(!real)return;Object.keys(players).forEach(pid=>{if((grpPreds[pid]||{})[l+suf]===real)ev.push({ts:(settings.prevStandings?.ts||Date.now()),icon:'📊',cls:'fd-grp',text:`<b>${pname(pid)}</b> acertó el ${lbl} del Grupo ${l}: ${real}`});});});});
   const sr=settings.specialResults||{},finSet=[sr.finalist1,sr.finalist2].filter(Boolean);
@@ -955,19 +955,21 @@ function renderLeaguePicker(){
 function calcScore(m,p){
   if(!m.result||!p)return null;
   const r=m.result;
-  if(+p.home===+r.home&&+p.away===+r.away)return 3;          // marcador exacto
+  const exact=(+p.home===+r.home&&+p.away===+r.away);
   const rw=r.winner||(+r.home>+r.away?'home':+r.away>+r.home?'away':'draw');
   const pDraw=+p.home===+p.away, rDraw=+r.home===+r.away;
   if(pDraw){
     if(!rDraw)return 0;                                       // predijo empate pero hubo ganador en los 90'
-    let pts=1;                                                // acertó que sería empate
-    if(p.tiebreaker&&p.tiebreaker===r.winner)pts++;           // +1 si además acertó quién gana en penaltis
+    let pts=exact?3:1;                                        // empate: exacto 3, si no 1
+    if(p.tiebreaker&&p.tiebreaker===r.winner)pts++;           // +1 si además acierta quién gana en penaltis
     return pts;
   }
+  if(exact)return 3;                                          // ganador con marcador exacto
   const pw=+p.home>+p.away?'home':'away';
-  return pw===rw?1:0;                                         // predijo ganador: 1 si avanza el que dijo
+  return pw===rw?1:0;                                         // ganador correcto = 1
 }
 function ptsTag(s){
+  if(s>=4)return '<span class="pts-tag pts-3">+'+s+'</span>';
   if(s===3)return '<span class="pts-tag pts-3">+3</span>';
   if(s===2)return '<span class="pts-tag pts-2">+2</span>';
   if(s===1)return '<span class="pts-tag pts-1">+1</span>';
@@ -986,7 +988,7 @@ function spPts(pid){
   return p;
 }
 function grpPts(pid){let p=0;const g=grpPreds[pid]||{},r=settings.groupResults||{};Object.keys(GRUPOS).forEach(l=>{if(g[l+'_1']&&r[l+'_1']&&g[l+'_1']===r[l+'_1'])p+=2;if(g[l+'_2']&&r[l+'_2']&&g[l+'_2']===r[l+'_2'])p+=2;});return p;}
-function totals(){const sc={};Object.values(players).forEach(p=>{sc[p.id]={pts:0,played:0,exact:0};});Object.values(matches).forEach(m=>{if(!m.result)return;Object.values(players).forEach(p=>{const pr=(preds[m.id]||{})[p.id];if(pr){const s=calcScore(m,pr);if(s!==null){sc[p.id].pts+=s;sc[p.id].played++;if(s===3)sc[p.id].exact++;}}});});Object.values(players).forEach(p=>{sc[p.id].pts+=spPts(p.id)+grpPts(p.id);});return sc;}
+function totals(){const sc={};Object.values(players).forEach(p=>{sc[p.id]={pts:0,played:0,exact:0};});Object.values(matches).forEach(m=>{if(!m.result)return;Object.values(players).forEach(p=>{const pr=(preds[m.id]||{})[p.id];if(pr){const s=calcScore(m,pr);if(s!==null){sc[p.id].pts+=s;sc[p.id].played++;if(+pr.home===+m.result.home&&+pr.away===+m.result.away)sc[p.id].exact++;}}});});Object.values(players).forEach(p=>{sc[p.id].pts+=spPts(p.id)+grpPts(p.id);});return sc;}
 // Guarda las posiciones actuales (antes de un cambio de resultado) para mostrar luego ▲/▼ a todos.
 function snapshotRanks(){const sc=totals(),ranks={};Object.values(players).sort(cmpPlayers(sc)).forEach((p,i)=>{ranks[p.id]=i+1;});return gref('settings/prevStandings').set({ranks,ts:Date.now()}).catch(()=>{});}
 
