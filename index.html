@@ -468,14 +468,14 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
           <div id="add-match-card" class="card hidden">
             <div class="ctitle">Agregar partido</div>
             <div class="g2">
-              <div class="fld"><label>Equipo local</label><input id="m-home" placeholder="Ej: Brasil"></div>
-              <div class="fld"><label>Equipo visitante</label><input id="m-away" placeholder="Ej: Argentina"></div>
+              <div class="fld"><label>Equipo local</label><select id="m-home"></select></div>
+              <div class="fld"><label>Equipo visitante</label><select id="m-away"></select></div>
             </div>
             <div class="fld"><label>Descripción / Fecha</label><input id="m-date" placeholder="Ej: Grupo C – Fecha 1"></div>
             <div class="fld"><label>Hora del saque (cierra predicciones)</label><input id="m-kick" type="datetime-local"></div>
             <div class="fld"><label>Fase</label>
               <select id="m-phase">
-                <option value="grupos">Fase de grupos</option><option value="octavos">Octavos de final</option>
+                <option value="grupos">Fase de grupos</option><option value="dieciseisavos">Dieciseisavos (16avos)</option><option value="octavos">Octavos de final</option>
                 <option value="cuartos">Cuartos de final</option><option value="semis">Semifinal</option>
                 <option value="3er">3er y 4to lugar</option><option value="final">Final</option>
               </select>
@@ -492,6 +492,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
               <button class="btn btn-gold btn-sm" onclick="openSeed()">🌱 Sembrar calendario</button>
               <button class="btn btn-sm" id="lock-btn" onclick="toggleLock()">🔒 Partidos</button>
               <button class="btn btn-sm" id="lockge-btn" onclick="toggleLockGE()">🔒 Grupos/Especiales</button>
+              <button class="btn btn-sm" onclick="syncToOtherLeague()">🔄 Copiar a la otra liga</button>
               <button class="btn btn-d btn-sm" onclick="openResetModal()">🗑 Resetear</button>
             </div>
             <div class="fld"><label>API Key – football-data.org</label>
@@ -503,6 +504,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
         <div class="phase-tabs">
           <button class="phase-tab on" onclick="filterPhase('all',this)">Todos</button>
           <button class="phase-tab" onclick="filterPhase('grupos',this)">Grupos</button>
+          <button class="phase-tab" onclick="filterPhase('dieciseisavos',this)">16avos</button>
           <button class="phase-tab" onclick="filterPhase('octavos',this)">Octavos</button>
           <button class="phase-tab" onclick="filterPhase('cuartos',this)">Cuartos</button>
           <button class="phase-tab" onclick="filterPhase('semis',this)">Semis</button>
@@ -591,14 +593,14 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
     <div class="modal-handle"></div>
     <h3>Editar partido</h3>
     <div class="g2">
-      <div class="fld"><label>Equipo local</label><input id="em-home"></div>
-      <div class="fld"><label>Equipo visitante</label><input id="em-away"></div>
+      <div class="fld"><label>Equipo local</label><select id="em-home"></select></div>
+      <div class="fld"><label>Equipo visitante</label><select id="em-away"></select></div>
     </div>
     <div class="fld"><label>Descripción / Fecha</label><input id="em-date"></div>
     <div class="fld"><label>Hora del saque (cierra predicciones)</label><input id="em-kick" type="datetime-local"></div>
     <div class="fld"><label>Fase</label>
       <select id="em-phase">
-        <option value="grupos">Fase de grupos</option><option value="octavos">Octavos de final</option>
+        <option value="grupos">Fase de grupos</option><option value="dieciseisavos">Dieciseisavos (16avos)</option><option value="octavos">Octavos de final</option>
         <option value="cuartos">Cuartos de final</option><option value="semis">Semifinal</option>
         <option value="3er">3er y 4to lugar</option><option value="final">Final</option>
       </select>
@@ -800,6 +802,8 @@ const GRUPOS={
   L:{teams:[{n:'Inglaterra',c:'gb-eng'},{n:'Croacia',c:'hr'},{n:'Ghana',c:'gh'},{n:'Panamá',c:'pa'}]},
 };
 const ALL48=Object.values(GRUPOS).flatMap(g=>g.teams).sort((a,b)=>a.n.localeCompare(b.n));
+function teamOpts48(){return '<option value="">— Elige equipo —</option>'+ALL48.map(t=>`<option value="${t.n}">${t.n}</option>`).join('');}
+function fillTeamSelects(){['m-home','m-away','em-home','em-away'].forEach(id=>{const el=document.getElementById(id);if(el&&el.tagName==='SELECT')el.innerHTML=teamOpts48();});}
 
 function flagImg(code,size='sm'){
   const cls=size==='sm'?'flag-img-sm':'flag-img';
@@ -923,6 +927,7 @@ const LEAGUES={
   liga1:'La Comarca',
   liga2:'Mundial'
 };
+fillTeamSelects();
 if(GID && LEAGUES[GID]){
   ensureLeagueMeta();
   initGroupListeners();
@@ -1040,8 +1045,8 @@ function renderTabla(){
 }
 
 // ── MATCHES ──────────────────────────────────────────────────────
-const PHL={grupos:'Grupos',octavos:'Octavos',cuartos:'Cuartos',semis:'Semifinal','3er':'3° y 4°',final:'Final'};
-function isKO(ph){return['octavos','cuartos','semis','3er','final'].includes(ph);}
+const PHL={grupos:'Grupos',dieciseisavos:'16avos',octavos:'Octavos',cuartos:'Cuartos',semis:'Semifinal','3er':'3° y 4°',final:'Final'};
+function isKO(ph){return['dieciseisavos','octavos','cuartos','semis','3er','final'].includes(ph);}
 // Una predicción de un partido se cierra si: el admin bloqueó todo, o ya pasó la hora del saque, o ya hay resultado.
 function matchLocked(m){
   if(m.result)return true;        // ya jugado
@@ -1179,6 +1184,19 @@ async function fetchTodayMatches(){
   }catch(e){toast('Error: '+e.message,'error');}
 }
 function saveApiKey(){const k=document.getElementById('api-key-inp').value.trim();if(!k)return;gref('settings/apiKey').set(k);toast('API key guardada');}
+
+// ── COPIAR PARTIDOS + RESULTADOS A LA OTRA LIGA ────────────────
+function syncToOtherLeague(){
+  const other=GID==='liga1'?'liga2':'liga1';
+  if(!LEAGUES[other]){toast('No hay otra liga','error');return;}
+  confirm2('Copiar a la otra liga',`Se copiarán los PARTIDOS y RESULTADOS de esta liga a "${LEAGUES[other]}" (reemplazando los suyos). Los jugadores y predicciones de la otra liga NO se tocan. ¿Continuar?`,()=>{
+    const updates={};
+    updates['groups/'+other+'/matches']=matches;
+    if(settings.groupResults)updates['groups/'+other+'/settings/groupResults']=settings.groupResults;
+    if(settings.specialResults)updates['groups/'+other+'/settings/specialResults']=settings.specialResults;
+    db.ref().update(updates).then(()=>toast('Copiado a '+LEAGUES[other]+' ✓')).catch(e=>toast('Error: '+e.message,'error'));
+  });
+}
 
 // ── SEMBRAR CALENDARIO OFICIAL (fase de grupos) ────────────────
 // [nºpartido, grupo, local, visitante, díaDeJunio, horaCentroMéxico(24h), min]
