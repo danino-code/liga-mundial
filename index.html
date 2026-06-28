@@ -562,7 +562,7 @@ input:focus,select:focus{border-color:var(--g);box-shadow:0 0 0 4px rgba(21,129,
           <div style="background:var(--bg);padding:13px;border-radius:var(--r2);font-size:13px;color:var(--muted);line-height:1.8;margin-top:4px">
             <strong style="color:var(--txt)">Grupos:</strong> +2 pts por cada equipo que clasificas correctamente.<br>
             <strong style="color:var(--txt)">Especiales:</strong> Finalistas +5 c/u · 3er y 4to +5 c/u · Campeón +10.<br>
-            <strong style="color:var(--txt)">Eliminatorias con empate:</strong> si predices empate y termina en empate: 1 punto (o 3 si el marcador es exacto), y <strong>+1 más</strong> si aciertas quién gana en penaltis. Así, marcador exacto + penaltis = 4.
+            <strong style="color:var(--txt)">Eliminatorias:</strong> el marcador se puntúa con el resultado a los 120' (3 exacto · 1 por acertar empate o quién gana) y <strong>+1 aparte por acertar quién pasa</strong> (gane en los 120' o en penaltis). Máximo 4.
           </div>
         </div>
         <div class="card" style="text-align:center;padding:1.8rem">
@@ -956,17 +956,15 @@ function calcScore(m,p){
   if(!m.result||!p)return null;
   const r=m.result;
   const exact=(+p.home===+r.home&&+p.away===+r.away);
-  const rw=r.winner||(+r.home>+r.away?'home':+r.away>+r.home?'away':'draw');
-  const pDraw=+p.home===+p.away, rDraw=+r.home===+r.away;
-  if(pDraw){
-    if(!rDraw)return 0;                                       // predijo empate pero hubo ganador en los 90'
-    let pts=exact?3:1;                                        // empate: exacto 3, si no 1
-    if(p.tiebreaker&&p.tiebreaker===r.winner)pts++;           // +1 si además acierta quién gana en penaltis
-    return pts;
+  const rTend=+r.home>+r.away?'home':+r.away>+r.home?'away':'draw';   // resultado a los 120'
+  const pTend=+p.home>+p.away?'home':+p.away>+p.home?'away':'draw';
+  let pts=exact?3:(pTend===rTend?1:0);                                // marcador: 3 exacto, 1 tendencia
+  if(isKO(m.phase)){
+    const rAdv=r.winner||rTend;                                       // quién pasa (gana en 120' o penaltis)
+    const pAdv=(pTend==='draw')?(p.tiebreaker||null):pTend;           // a quién diste como clasificado
+    if(pAdv&&pAdv===rAdv)pts++;                                       // +1 por acertar quién pasa
   }
-  if(exact)return 3;                                          // ganador con marcador exacto
-  const pw=+p.home>+p.away?'home':'away';
-  return pw===rw?1:0;                                         // ganador correcto = 1
+  return pts;
 }
 function ptsTag(s){
   if(s>=4)return '<span class="pts-tag pts-3">+'+s+'</span>';
